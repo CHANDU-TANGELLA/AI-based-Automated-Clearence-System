@@ -1,0 +1,29 @@
+create database nodue;
+use nodue;
+
+create table employees(emp_name varchar(40),
+gender varchar(20),
+contact_no varchar(20),
+email varchar(50), 
+qualification varchar(65),
+experience varchar(45),
+user_role varchar(35),
+username varchar(50) primary key,
+password varchar(50));
+
+create table student(student_id varchar(50),
+student_name varchar(40),
+gender varchar(20),
+contact_no varchar(20),
+email varchar(50), 
+course varchar(50),
+course_year varchar(20),
+password varchar(50),
+library_fee double,
+hostel_fee double,
+tution_fee double,
+exam_fee double,
+lab_hod_fee double,
+PRIMARY KEY(student_id, course_year));
+
+create table payments(student_id varchar(50),course_year varchar(20),paying_dept varchar(50), amount double, payment_date varchar(30));
