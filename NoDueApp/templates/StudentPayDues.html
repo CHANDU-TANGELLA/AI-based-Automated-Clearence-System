@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Pay Dues - AI Clearance</title>  
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="../static/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="host_version"> 
+
+	<header class="top-navbar">
+		<nav class="navbar navbar-expand-lg navbar-light bg-light">
+			<div class="container-fluid">
+				<a class="navbar-brand p-0" href="/">
+					<h1 class="text-white" style="font-size: xx-large;" ><i class="fa fa-certificate fa-1x me-2"></i> AI<span style="color: #eea412;">Clearance</span></h1>
+				</a>
+                <div class="collapse navbar-collapse">
+					<ul class="navbar-nav ml-auto">
+						<li class="nav-item"><a class="nav-link" href="/StudentScreen.html"><i class="fa fa-arrow-left"></i> Back to Dashboard</a></li>
+					</ul>					
+				</div>
+			</div>
+		</nav>
+	</header>
+	
+	<div class="dashboard-container" style="padding: 40px;">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card shadow" style="border: none; border-radius: 10px; overflow: hidden;">
+                    <div class="card-header text-white" style="background-color: #28a745; padding: 15px;">
+                        <h3 class="card-title mb-0" style="margin: 0;"><i class="fa fa-credit-card"></i> Pay Department Dues</h3>
+                    </div>
+                    <div class="card-body" style="padding: 30px; background: #fff;">
+                        {% if has_dues %}
+                            <div class="alert alert-warning">
+                                <strong>Note:</strong> You have pending dues. Select a department to pay.
+                            </div>
+                            
+                            <table class="table table-bordered table-striped">
+                                <thead class="table-dark" style="background: #333; color: #fff;">
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Total Fee</th>
+                                        <th>Paid So Far</th>
+                                        <th>Pending Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dept_name, details in dues.items %}
+                                    <tr>
+                                        <td>{{ dept_name }}</td>
+                                        <td>{{ details.total }}</td>
+                                        <td>{{ details.paid }}</td>
+                                        <td style="color:red; font-weight:bold;">{{ details.pending }}</td>
+                                        <td>
+                                            <button class="btn btn-success btn-sm" onclick="openPaymentModal('{{ dept_name }}', '{{ details.pending }}')">
+                                                Pay Now
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <div id="paymentArea" style="display:none; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                                <h4 class="mb-3">Confirm Payment</h4>
+                                <form action="/StudentPayDuesAction" method="post">
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                    <input type="hidden" name="student_id" value="{{ student_id }}">
+                                    <input type="hidden" name="year" value="{{ year }}">
+                                    <input type="hidden" name="department" id="pay_dept">
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label>Paying for Department:</label>
+                                            <input type="text" class="form-control" id="display_dept" disabled>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label>Amount to Pay:</label>
+                                            <input type="number" name="amount" id="pay_amount" class="form-control" required readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label>Card Number (Simulated):</label>
+                                        <input type="text" class="form-control" placeholder="XXXX-XXXX-XXXX-XXXX" required>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary w-100" style="padding: 12px;">Confirm Payment</button>
+                                </form>
+                            </div>
+
+                        {% else %}
+                            <div class="alert alert-success text-center">
+                                <h4><i class="fa fa-check-circle"></i> Congratulations!</h4>
+                                <p>You have no pending dues in any department.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../static/js/all.js"></script>
+    <script>
+    function openPaymentModal(dept, amount) {
+        document.getElementById('paymentArea').style.display = 'block';
+        document.getElementById('pay_dept').value = dept;
+        document.getElementById('display_dept').value = dept;
+        document.getElementById('pay_amount').value = amount;
+        document.getElementById('paymentArea').scrollIntoView({behavior: "smooth"});
+    }
+    </script>
+</body>
+</html>
