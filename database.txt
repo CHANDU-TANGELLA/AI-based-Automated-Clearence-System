@@ -1,5 +1,5 @@
-create database nodue;
-use nodue;
+create database geminidatabase;
+use geminidatabase;
 
 create table employees(emp_name varchar(40),
 gender varchar(20),
@@ -16,6 +16,7 @@ student_name varchar(40),
 gender varchar(20),
 contact_no varchar(20),
 email varchar(50), 
+address varchar(200),
 course varchar(50),
 course_year varchar(20),
 password varchar(50),
@@ -27,3 +28,14 @@ lab_hod_fee double,
 PRIMARY KEY(student_id, course_year));
 
 create table payments(student_id varchar(50),course_year varchar(20),paying_dept varchar(50), amount double, payment_date varchar(30));
+
+create table document_submissions(
+    id integer primary key autoincrement,
+    student_id varchar(50),
+    department varchar(50),
+    document_type varchar(50),
+    file_path varchar(255),
+    uploaded_at datetime,
+    ai_verification_status varchar(20),
+    ai_confidence_score double
+);

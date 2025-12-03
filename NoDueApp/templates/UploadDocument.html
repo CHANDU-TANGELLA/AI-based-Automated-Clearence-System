@@ -41,7 +41,7 @@
                         </div>
                         
                         <form action="/UploadDocument" method="post" enctype="multipart/form-data">
-                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            {% csrf_token %}
                             
                             <div class="form-group mb-3">
                                 <label style="font-weight: bold;">Student ID</label>

@@ -1,169 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Basic -->
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">   
-   
-    <!-- Mobile Metas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
- 
-     <!-- Site Metas -->
-    <title>Update Employee - AI-Based Automated Clearance System</title>  
-    <meta name="keywords" content="">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <!-- Icon Font Stylesheet -->
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"/>
-
-    <!-- Site Icons -->
-    <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon" />
-    <link rel="apple-touch-icon" href="../static/images/apple-touch-icon.png">
-
-    <!-- Bootstrap CSS -->
+    <title>Update Employee - AI Clearance</title>  
     <link rel="stylesheet" href="../static/css/bootstrap.min.css">
-    <!-- Site CSS -->
     <link rel="stylesheet" href="../static/style.css">
-    <!-- ALL VERSION CSS -->
-    <link rel="stylesheet" href="../static/css/versions.css">
-    <!-- Responsive CSS -->
-    <link rel="stylesheet" href="../static/css/responsive.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../static/css/custom.css?v=1.5">
-
-    <!-- Modernizer for Portfolio -->
-    <script src="../static/js/modernizer.js"></script>
-
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
+    <link rel="stylesheet" href="../static/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="host_version form-page"> 
+<body class="host_version"> 
 
-    <!-- LOADER -->
-	<div id="preloader">
-		<div class="loader-container">
-			<div class="progress-br float shadow">
-				<div class="progress__item"></div>
-			</div>
-		</div>
-	</div>
-	<!-- END LOADER -->	
-	
-	<!-- Start header -->
 	<header class="top-navbar">
 		<nav class="navbar navbar-expand-lg navbar-light bg-light">
 			<div class="container-fluid">
 				<a class="navbar-brand p-0" href="/">
 					<h1 class="text-white" style="font-size: xx-large;" ><i class="fa fa-certificate fa-1x me-2"></i> AI<span style="color: #eea412;">Clearance</span></h1>
-				</a>                                  
-				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbars-host" aria-controls="navbars-rs-food" aria-expanded="false" aria-label="Toggle navigation">
-					<span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-				</button>
-				<div class="collapse navbar-collapse" id="navbars-host">
+				</a>
+                <div class="collapse navbar-collapse">
 					<ul class="navbar-nav ml-auto">
-						<li class="nav-item"><a class="nav-link" href="/ViewEmployees.html">Back to Employees</a></li>
-						<li class="nav-item"><a class="nav-link" href="/">Logout</a></li>						
+						<li class="nav-item">
+                            <a class="nav-link" href="/ViewEmployees">
+                                <i class="fa fa-arrow-left"></i> Back to Employee List
+                            </a>
+                        </li>
 					</ul>					
 				</div>
 			</div>
 		</nav>
 	</header>
-	<!-- End header -->
 	
-	<div class="form-container">
-        <h2><i class="fa fa-user-edit"></i> Update Employee</h2>
-        
-        {% if data %}
-        <div class="status-message {% if 'added' in data|lower or 'success' in data|lower %}success{% else %}error{% endif %}">
-            {{ data|safe }}
-        </div>
-        {% endif %}
+	<div class="dashboard-container" style="padding: 40px;">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <div class="card shadow" style="border: none; border-radius: 10px; overflow: hidden;">
+                    <div class="card-header text-white" style="background-color: #eea412; padding: 15px;">
+                        <h3 class="card-title mb-0"><i class="fa fa-edit"></i> Update Employee Details</h3>
+                    </div>
+                    <div class="card-body" style="background: #fff; padding: 30px;">
+                        
+                        <form action="/UpdateEmployeeAction" method="post">
+                            {% csrf_token %}
+                            
+                            <input type="hidden" name="old_username" value="{{ employee.7 }}">
 
-        {% if employee %}
-        <form action="/UpdateEmployeeAction" method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="old_username" value="{{ employee.7 }}">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="t1"><i class="fa fa-user"></i> Employee Name</label>
-                    <input type="text" name="t1" id="t1" placeholder="Enter employee full name" value="{{ employee.0 }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="t2"><i class="fa fa-venus-mars"></i> Gender</label>
-                    <select name="t2" id="t2" required>
-                        <option value="">Select Gender</option>
-                        <option value="Male" {% if employee.1 == "Male" %}selected{% endif %}>Male</option>
-                        <option value="Female" {% if employee.1 == "Female" %}selected{% endif %}>Female</option>
-                        <option value="Other" {% if employee.1 == "Other" %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="t3"><i class="fa fa-phone"></i> Contact Number</label>
-                    <input type="text" name="t3" id="t3" placeholder="Enter contact number" value="{{ employee.2 }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="t4"><i class="fa fa-envelope"></i> Email ID</label>
-                    <input type="email" name="t4" id="t4" placeholder="Enter email address" value="{{ employee.3 }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="t5"><i class="fa fa-graduation-cap"></i> Qualification</label>
-                    <input type="text" name="t5" id="t5" placeholder="Enter qualification" value="{{ employee.4 }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="t6"><i class="fa fa-briefcase"></i> Experience</label>
-                    <input type="text" name="t6" id="t6" placeholder="Enter years of experience" value="{{ employee.5 }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="t7"><i class="fa fa-building"></i> Department Role</label>
-                    <select name="t7" id="t7" required>
-                        <option value="">Select Department</option>
-                        <option value="Accounts" {% if employee.6 == "Accounts" %}selected{% endif %}>Accounts</option>
-                        <option value="Library" {% if employee.6 == "Library" %}selected{% endif %}>Library</option>
-                        <option value="Hostel" {% if employee.6 == "Hostel" %}selected{% endif %}>Hostel</option>
-                        <option value="Exam Fee Dept" {% if employee.6 == "Exam Fee Dept" %}selected{% endif %}>Exam Fee Dept</option>
-                        <option value="HOD Lab Returns" {% if employee.6 == "HOD Lab Returns" %}selected{% endif %}>HOD Lab Returns</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="t8"><i class="fa fa-user-circle"></i> Username</label>
-                    <input type="text" name="t8" id="t8" placeholder="Enter username" value="{{ employee.7 }}" required>
-                </div>
-                <div class="form-group full-width">
-                    <label for="t9"><i class="fa fa-lock"></i> Password</label>
-                    <input type="password" name="t9" id="t9" placeholder="Enter password" value="{{ employee.8 }}" required>
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Employee Name</label>
+                                <input type="text" name="t1" class="form-control" value="{{ employee.0 }}" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Gender</label>
+                                <select name="t2" class="form-control" required>
+                                    <option value="{{ employee.1 }}" selected>{{ employee.1 }}</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Contact No</label>
+                                <input type="text" name="t3" class="form-control" value="{{ employee.2 }}" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Email</label>
+                                <input type="email" name="t4" class="form-control" value="{{ employee.3 }}" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Qualification</label>
+                                <input type="text" name="t5" class="form-control" value="{{ employee.4 }}" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Experience</label>
+                                <input type="text" name="t6" class="form-control" value="{{ employee.5 }}" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Department Role</label>
+                                <select name="t7" class="form-control" required>
+                                    <option value="{{ employee.6 }}" selected>{{ employee.6 }}</option>
+                                    <option value="Accounts">Accounts</option>
+                                    <option value="Library">Library</option>
+                                    <option value="Hostel">Hostel</option>
+                                    <option value="Exam Fee Dept">Exam Fee Dept</option>
+                                    <option value="HOD Lab Returns">HOD Lab Returns</option>
+                                    <option value="Admin">Admin</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Username</label>
+                                <input type="text" name="t8" class="form-control" value="{{ employee.7 }}" required>
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label style="font-weight: bold;">Password</label>
+                                <input type="text" name="t9" class="form-control" value="{{ employee.8 }}" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-warning w-100 text-white" style="font-weight: bold; padding: 10px;">
+                                <i class="fa fa-save"></i> Save Changes
+                            </button>
+                        </form>
+
+                    </div>
                 </div>
             </div>
-            <button type="submit" class="form-submit-btn">
-                <i class="fa fa-save"></i> Update Employee
-            </button>
-        </form>
-        {% endif %}
-    </div>
-
-    <div class="copyrights">
-        <div class="container">
-            <div class="footer-distributed">
-                <div class="footer-center">                   
-                    <p class="footer-company-name">All Rights Reserved. © 2018 SmartEDU Design By : html design, Modified By: "Your Name"</p>
-                </div>
-            </div>
         </div>
     </div>
-
-    <a href="#" id="scroll-to-top" class="dmtop global-radius"><i class="fa fa-angle-up"></i></a>
-
-    <!-- ALL JS FILES -->
     <script src="../static/js/all.js"></script>
-    <!-- ALL PLUGINS -->
-    <script src="../static/js/custom.js"></script>
-	<script src="../static/js/timeline.min.js"></script>
 </body>
 </html>
-
-

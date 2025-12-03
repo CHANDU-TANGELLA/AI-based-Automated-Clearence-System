@@ -3,9 +3,15 @@
 from transformers import pipeline
 import PyPDF2
 from django.shortcuts import redirect
+from .models import Student, Payment, DocumentSubmission, Employee
 
 
-from transformers import AutoTokenizer, RagRetriever
+from transformers import pipeline
+import PyPDF2
+from django.shortcuts import redirect
+from .models import Student, Payment, DocumentSubmission, Employee
+
+
 import torch
 from django.shortcuts import render
 from django.template import RequestContext
@@ -42,6 +48,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 import qrcode
 from PIL import Image as PILImage
 import zipfile
+from django.db.models import Sum
 
 
 
@@ -56,10 +63,15 @@ student_year = ""
 student_name_global = ""
 student_course_global = ""
 
-global tokenizer, retriever, model
-tokenizer = AutoTokenizer.from_pretrained("facebook/rag-sequence-nq")
-model = RagRetriever.from_pretrained("facebook/rag-sequence-nq", index_name="exact", use_dummy_dataset=True)
-#model = RagSequenceForGeneration.from_pretrained("facebook/rag-token-nq", retriever=retriever)
+# Lazy loading for heavy models
+_classifier = None
+
+def get_classifier():
+    global _classifier
+    if _classifier is None:
+        print("Loading Zero-Shot Classifier...")
+        _classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    return _classifier
 
 def sendEmail(email, msg):
     em = []
@@ -72,7 +84,7 @@ def sendEmail(email, msg):
 
 def getMail(student):
     email = ""
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
     with con:
         cur = con.cursor()
         cur.execute("select email from student where student_id='"+student+"'")
@@ -83,81 +95,30 @@ def getMail(student):
     sendEmail(email, "Your no due certificate generated and can be downloaded by login to appplication")    
 
 def getTotalFee(student, year):
-    library = 0
-    hostel = 0
-    tution = 0
-    exam = 0
-    lab = 0
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-    with con:
-        cur = con.cursor()
-        cur.execute("select library_fee,hostel_fee,tution_fee,exam_fee,lab_hod_fee from student where student_id='"+student+"' and course_year='"+year+"'")
-        rows = cur.fetchall()
-        for row in rows:
-            library = row[0] if row[0] is not None else 0
-            hostel = row[1] if row[1] is not None else 0
-            tution = row[2] if row[2] is not None else 0
-            exam = row[3] if row[3] is not None else 0
-            lab = row[4] if row[4] is not None else 0
-            break
-    return library, hostel, tution, exam, lab
+    try:
+        student_obj = Student.objects.get(student_id=student, course_year=year)
+        return (
+            student_obj.library_fee,
+            student_obj.hostel_fee,
+            student_obj.tution_fee,
+            student_obj.exam_fee,
+            student_obj.lab_hod_fee
+        )
+    except Student.DoesNotExist:
+        return 0, 0, 0, 0, 0
+
 
 def getPaidFee(student, year):
-    library = 0
-    hostel = 0
-    tution = 0
-    exam = 0
-    lab = 0
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-    with con:
-        cur = con.cursor()
-        cur.execute("select sum(amount) from payments where paying_dept='Accounts' and student_id='"+student+"' and course_year='"+year+"'")
-        rows = cur.fetchall()
-        for row in rows:
-            tution = row[0]
-            break
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-    with con:
-        cur = con.cursor()
-        cur.execute("select sum(amount) from payments where paying_dept='Library' and student_id='"+student+"' and course_year='"+year+"'")
-        rows = cur.fetchall()
-        for row in rows:
-            library = row[0]
-            break
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-    with con:
-        cur = con.cursor()
-        cur.execute("select sum(amount) from payments where paying_dept='Hostel' and student_id='"+student+"' and course_year='"+year+"'")
-        rows = cur.fetchall()
-        for row in rows:
-            hostel = row[0]
-            break
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-    with con:
-        cur = con.cursor()
-        cur.execute("select sum(amount) from payments where paying_dept='Exam Fee Dept' and student_id='"+student+"' and course_year='"+year+"'")
-        rows = cur.fetchall()
-        for row in rows:
-            exam = row[0]
-            break
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-    with con:
-        cur = con.cursor()
-        cur.execute("select sum(amount) from payments where paying_dept='HOD Lab Returns' and student_id='"+student+"' and course_year='"+year+"'")
-        rows = cur.fetchall()
-        for row in rows:
-            lab = row[0]
-            break
-    if tution is None:
-        tution = 0
-    if library is None:
-        library = 0
-    if exam is None:
-        exam = 0
-    if hostel is None:
-        hostel = 0
-    if lab is None:
-        lab = 0    
+    def get_sum(dept):
+        result = Payment.objects.filter(student_id=student, course_year=year, paying_dept=dept).aggregate(Sum('amount'))
+        return result['amount__sum'] or 0.0
+
+    tution = get_sum('Accounts')
+    library = get_sum('Library')
+    hostel = get_sum('Hostel')
+    exam = get_sum('Exam Fee Dept')
+    lab = get_sum('HOD Lab Returns')
+    
     return library, hostel, tution, exam, lab
 
 def getDepartmentTotalFee(student, year, department):
@@ -179,26 +140,23 @@ def getDepartmentTotalFee(student, year, department):
 
 def getCumulativePaidAmount(student, year, department, payment_date):
     """Get cumulative paid amount for a department up to a specific payment date"""
-    cumulative_paid = 0
     try:
-        con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
-        with con:
-            cur = con.cursor()
-            # Get sum of payments for this department up to and including the payment date
-            query = "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE student_id=%s AND course_year=%s AND paying_dept=%s AND payment_date <= %s"
-            cur.execute(query, (student, year, department, payment_date))
-            row = cur.fetchone()
-            if row and row[0] is not None:
-                cumulative_paid = float(row[0])
+        result = Payment.objects.filter(
+            student_id=student, 
+            course_year=year, 
+            paying_dept=department, 
+            payment_date__lte=payment_date
+        ).aggregate(Sum('amount'))
+        return float(result['amount__sum'] or 0.0)
     except Exception as e:
         print(f"Error calculating cumulative paid amount: {e}")
-    return cumulative_paid
+        return 0.0
 
 def getStudentDetails(student_id, year):
     """Get student name and course details from database"""
     student_name = ""
     course = ""
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
     with con:
         cur = con.cursor()
         cur.execute("select student_name, course from student where student_id='"+student_id+"' and course_year='"+year+"'")
@@ -570,9 +528,7 @@ def GenerateNoDueAction(request):
         student_year = year
         # Get student details
         student_name_global, student_course_global = getStudentDetails(student, year)
-        inputs = tokenizer(student+" "+year, return_tensors="pt")
-        input_ids = inputs["input_ids"]
-        #due_detect = model.question_encoder(input_ids)[0]
+
         output = '<font size=3 color=black>Student Id = '+student+"</font><br/>"
         output += '<font size=3 color=black>Course Year = '+year+"</font><br/><br/>"
         output+='<table border=1 align=center width=100%><tr><th><font size="3" color="black">Fee Type</th><th><font size="3" color="black">Total Fee</th>'
@@ -669,14 +625,7 @@ def GenerateNoDue(request):
 def ViewStudents(request):
     if request.method == 'GET':
         global dept
-        students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select * from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row)
+        students = Student.objects.all()
         # Determine dashboard based on user type (employee has dept set)
         dashboard_link = '/EmployeeScreen.html' if dept else '/AdminScreen.html'
         context = {'students': students, 'data': '', 'dashboard_link': dashboard_link}
@@ -707,51 +656,31 @@ def AcceptFeeAction(request):
             context = {'data': status}
             return render(request, 'EmployeeScreen.html', context)
         
-        # Verify that student_id and course_year combination exists in the student table
         try:
-            db_connection = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue', charset='utf8')
-            try:
-                db_cursor = db_connection.cursor()
-                # Check if student exists with the given course_year
-                check_query = "SELECT student_id FROM student WHERE student_id = %s AND course_year = %s"
-                db_cursor.execute(check_query, (student, year))
-                student_record = db_cursor.fetchone()
+            # Check if student exists with the given course_year
+            if not Student.objects.filter(student_id=student, course_year=year).exists():
+                status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Student ID <strong>" + str(student) + "</strong> with Course Year <strong>" + str(year) + "</strong> not found. Please verify the details.</div>"
+                context = {'data': status}
+                return render(request, 'EmployeeScreen.html', context)
+            
+            # Check if the department fee is 0 for this student (no due)
+            department_total_fee = getDepartmentTotalFee(student, year, dept)
+            if department_total_fee == 0:
+                status = "<div class='alert-message info'><i class='fa fa-info-circle'></i> <strong>No Due</strong> for Student ID <strong>" + str(student) + "</strong> with Course Year <strong>" + str(year) + "</strong> in <strong>" + dept + "</strong> department. Fee amount is ₹0.</div>"
+                context = {'data': status}
+                return render(request, 'EmployeeScreen.html', context)
+            
+            # If student exists and has a due, proceed with payment insertion
+            Payment.objects.create(
+                student_id=student,
+                course_year=year,
+                paying_dept=dept,
+                amount=fee_value,
+                payment_date=str(date.today())
+            )
+            
+            status = "<div class='alert-message success'><i class='fa fa-check-circle'></i> <strong>"+dept+"</strong> fee of ₹"+str(fee_value)+" successfully accepted from student <strong>"+student+"</strong> for Course Year <strong>"+year+"</strong></div>"
                 
-                if not student_record:
-                    status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Student ID <strong>" + str(student) + "</strong> with Course Year <strong>" + str(year) + "</strong> not found. Please verify the details.</div>"
-                    context = {'data': status}
-                    db_cursor.close()
-                    db_connection.close()
-                    return render(request, 'EmployeeScreen.html', context)
-                
-                # Check if the department fee is 0 for this student (no due)
-                department_total_fee = getDepartmentTotalFee(student, year, dept)
-                if department_total_fee == 0:
-                    status = "<div class='alert-message info'><i class='fa fa-info-circle'></i> <strong>No Due</strong> for Student ID <strong>" + str(student) + "</strong> with Course Year <strong>" + str(year) + "</strong> in <strong>" + dept + "</strong> department. Fee amount is ₹0.</div>"
-                    context = {'data': status}
-                    db_cursor.close()
-                    db_connection.close()
-                    return render(request, 'EmployeeScreen.html', context)
-                
-                # If student exists and has a due, proceed with payment insertion
-                dd = str(date.today())
-                insert_query = "INSERT INTO payments VALUES(%s, %s, %s, %s, %s)"
-                db_cursor.execute(insert_query, (student, year, dept, fee_value, dd))
-                db_connection.commit()
-                
-                if db_cursor.rowcount == 1:
-                    status = "<div class='alert-message success'><i class='fa fa-check-circle'></i> <strong>"+dept+"</strong> fee of ₹"+str(fee_value)+" successfully accepted from student <strong>"+student+"</strong> for Course Year <strong>"+year+"</strong></div>"
-                else:
-                    status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Failed to record payment. Please try again.</div>"
-                    
-            except pymysql.Error as e:
-                db_connection.rollback()
-                status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Database error occurred: " + str(e) + "</div>"
-            finally:
-                db_cursor.close()
-                db_connection.close()
-        except pymysql.Error as e:
-            status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Database connection error: " + str(e) + "</div>"
         except Exception as e:
             status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> An unexpected error occurred: " + str(e) + "</div>"
         
@@ -759,26 +688,13 @@ def AcceptFeeAction(request):
         return render(request, 'EmployeeScreen.html', context)
     else:
         students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select student_id from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row[0])
+        students = Student.objects.values_list('student_id', flat=True).distinct()
         return render(request, 'AcceptFee.html', {'students': students, 'dept': dept if 'dept' in globals() else '', 'fee_type': '', 'fee_label': '', 'data': '<font size=3 color=red>Invalid request method. Please use the form to accept fee.</font>'})
 
 def AcceptFee(request):
     if request.method == 'GET':
         global dept
-        students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select student_id from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row[0])
+        students = Student.objects.values_list('student_id', flat=True).distinct()
         
         # Determine fee type based on department
         fee_type = ""
@@ -827,55 +743,33 @@ def UpdateFeeAction(request):
                 status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Fee amount cannot be negative.</div>"
                 context = {'data': status}
                 return render(request, 'EmployeeScreen.html', context)
-            # Note: fee_value can be 0, which means the fee is cleared/waved
         except ValueError:
             status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Invalid fee amount. Please enter a valid number.</div>"
             context = {'data': status}
             return render(request, 'EmployeeScreen.html', context)
         
-        # Determine column based on department
-        column = ""
-        if dept == "Accounts":
-            column = 'tution_fee'
-        elif dept == "Library":
-            column = 'library_fee'
-        elif dept == "Hostel":
-            column = 'hostel_fee'
-        elif dept == "Exam Fee Dept":
-            column = 'exam_fee'
-        elif dept == "HOD Lab Returns":
-            column = 'lab_hod_fee'
-        
-        # Check if column was determined
-        if not column:
-            status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Invalid department. Cannot determine fee type to update.</div>"
-            context = {'data': status}
-            return render(request, 'EmployeeScreen.html', context)
-        
-        # Execute database update with proper error handling
         try:
-            db_connection = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue', charset='utf8')
-            try:
-                db_cursor = db_connection.cursor()
-                # Use parameterized query to prevent SQL injection
-                query = "UPDATE student SET " + column + " = %s WHERE student_id = %s AND course_year = %s"
-                db_cursor.execute(query, (fee_value, student, year))
-                db_connection.commit()
+            updated_count = 0
+            if dept == "Accounts":
+                updated_count = Student.objects.filter(student_id=student, course_year=year).update(tution_fee=fee_value)
+            elif dept == "Library":
+                updated_count = Student.objects.filter(student_id=student, course_year=year).update(library_fee=fee_value)
+            elif dept == "Hostel":
+                updated_count = Student.objects.filter(student_id=student, course_year=year).update(hostel_fee=fee_value)
+            elif dept == "Exam Fee Dept":
+                updated_count = Student.objects.filter(student_id=student, course_year=year).update(exam_fee=fee_value)
+            elif dept == "HOD Lab Returns":
+                updated_count = Student.objects.filter(student_id=student, course_year=year).update(lab_hod_fee=fee_value)
+            else:
+                status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Invalid department. Cannot determine fee type to update.</div>"
+                context = {'data': status}
+                return render(request, 'EmployeeScreen.html', context)
+            
+            if updated_count > 0:
+                status = "<div class='alert-message success'><i class='fa fa-check-circle'></i> Selected student fee successfully updated</div>"
+            else:
+                status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> No student found with Student ID: " + str(student) + " and Course Year: " + str(year) + ". Please verify the details.</div>"
                 
-                if db_cursor.rowcount == 1:
-                    status = "<div class='alert-message success'><i class='fa fa-check-circle'></i> Selected student fee successfully updated</div>"
-                elif db_cursor.rowcount == 0:
-                    status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> No student found with Student ID: " + str(student) + " and Course Year: " + str(year) + ". Please verify the details.</div>"
-                else:
-                    status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Unexpected error: Multiple records updated. Please contact administrator.</div>"
-            except pymysql.Error as e:
-                db_connection.rollback()
-                status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Database error occurred: " + str(e) + "</div>"
-            finally:
-                db_cursor.close()
-                db_connection.close()
-        except pymysql.Error as e:
-            status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> Database connection error: " + str(e) + "</div>"
         except Exception as e:
             status = "<div class='alert-message error'><i class='fa fa-exclamation-circle'></i> An unexpected error occurred: " + str(e) + "</div>"
         
@@ -883,26 +777,13 @@ def UpdateFeeAction(request):
         return render(request, 'EmployeeScreen.html', context)
     else:
         students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select student_id from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row[0])
+        students = Student.objects.values_list('student_id', flat=True).distinct()
         return render(request, 'UpdateFee.html', {'students': students, 'dept': dept if 'dept' in globals() else '', 'fee_type': '', 'fee_label': '', 'data': '<font size=3 color=red>Invalid request method. Please use the form to update fee.</font>'})
 
 def UpdateFee(request):
     if request.method == 'GET':
         global dept
-        students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select student_id from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row[0])
+        students = Student.objects.values_list('student_id', flat=True).distinct()
         
         # Determine fee type based on department
         fee_type = ""
@@ -972,7 +853,7 @@ def VerifyCertificate(request):
             student_name, course = getStudentDetails(student_id, year)
             
             # Check if student exists and has cleared dues
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
             with con:
                 cur = con.cursor()
                 cur.execute("select * from student where student_id='"+student_id+"' and course_year='"+year+"'")
@@ -1071,7 +952,7 @@ def StudentScreen(request):
         student_details = []
         if uname:
             # Fetch all student records for this student_id (multiple course years possible)
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
             with con:
                 cur = con.cursor()
                 cur.execute("select * from student where student_id='"+uname+"' ORDER BY course_year DESC")
@@ -1132,21 +1013,14 @@ def EmployeeLoginAction(request):
         username = request.POST.get('t1', False)
         password = request.POST.get('t2', False)
         role = request.POST.get('t3', False)
-        index = 0
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:    
-            cur = con.cursor()
-            cur.execute("select username, password FROM employees where username='"+username+"' and password='"+password+"' and user_role='"+role+"'")
-            rows = cur.fetchall()
-            for row in rows:
-                uname = username
-                dept = role
-                index = 1
-                break		
-        if index == 1:
+        
+        try:
+            employee = Employee.objects.get(username=username, password=password, user_role=role)
+            uname = username
+            dept = role
             context= {'data':'welcome '+username}
             return render(request, 'EmployeeScreen.html', context)
-        else:
+        except Employee.DoesNotExist:
             context= {'data':'login failed'}
             return render(request, 'EmployeeLogin.html', context)
     else:
@@ -1157,59 +1031,41 @@ def StudentLoginAction(request):
         global uname
         username = request.POST.get('t1', False)
         password = request.POST.get('t2', False)
-        index = 0
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:    
-            cur = con.cursor()
-            cur.execute("select student_id, password FROM student")
-            rows = cur.fetchall()
-            for row in rows:
-                if row[0] == username and password == row[1]:
-                    uname = username
-                    index = 1
-                    break		
-        if index == 1:
-            # Fetch and display student details immediately after login
-            student_details = []
-            if uname:
-                # Fetch all student records for this student_id (multiple course years possible)
-                con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-                with con:
-                    cur = con.cursor()
-                    cur.execute("select * from student where student_id='"+uname+"' ORDER BY course_year DESC")
-                    rows = cur.fetchall()
-                    for row in rows:
-                        student_details.append(row)
+        
+        # Check if student exists
+        if Student.objects.filter(student_id=username, password=password).exists():
+            uname = username
+            
+            # Fetch all records for this student
+            student_details = Student.objects.filter(student_id=uname).order_by('-course_year')
+            
+            if student_details:
+                # Build student details display
+                details_html = '<div class="student-details-container">'
+                details_html += '<h3><i class="fa fa-user-graduate"></i> Student Details</h3>'
+                details_html += '<div class="student-info-grid">'
                 
-                if student_details:
-                    # Build student details display
-                    details_html = '<div class="student-details-container">'
-                    details_html += '<h3><i class="fa fa-user-graduate"></i> Student Details</h3>'
-                    details_html += '<div class="student-info-grid">'
-                    
-                    for student in student_details:
-                        # student record: (student_id, student_name, gender, contact_no, email, course, course_year, password, library_fee, hostel_fee, tution_fee, exam_fee, lab_hod_fee)
-                        details_html += '<div class="student-info-card">'
-                        details_html += '<h4><i class="fa fa-id-card"></i> Student ID: ' + str(student[0]) + '</h4>'
-                        details_html += '<p><strong>Name:</strong> ' + str(student[1] if student[1] else 'N/A') + '</p>'
-                        details_html += '<p><strong>Gender:</strong> ' + str(student[2] if student[2] else 'N/A') + '</p>'
-                        details_html += '<p><strong>Contact:</strong> ' + str(student[3] if student[3] else 'N/A') + '</p>'
-                        details_html += '<p><strong>Email:</strong> ' + str(student[4] if student[4] else 'N/A') + '</p>'
-                        details_html += '<p><strong>Course:</strong> ' + str(student[5] if student[5] else 'N/A') + '</p>'
-                        details_html += '<p><strong>Course Year:</strong> ' + str(student[6] if student[6] else 'N/A') + '</p>'
-                        details_html += '<hr style="margin: 10px 0; border: 1px solid #ddd;">'
-                        details_html += '<h5><i class="fa fa-money-bill-wave"></i> Fee Structure:</h5>'
-                        details_html += '<p><strong>Library Fee:</strong> ₹' + str(student[8] if student[8] is not None else '0') + '</p>'
-                        details_html += '<p><strong>Hostel Fee:</strong> ₹' + str(student[9] if student[9] is not None else '0') + '</p>'
-                        details_html += '<p><strong>Tution Fee:</strong> ₹' + str(student[10] if student[10] is not None else '0') + '</p>'
-                        details_html += '<p><strong>Exam Fee:</strong> ₹' + str(student[11] if student[11] is not None else '0') + '</p>'
-                        details_html += '<p><strong>Lab HOD Fee:</strong> ₹' + str(student[12] if student[12] is not None else '0') + '</p>'
-                        details_html += '</div>'
-                    
-                    details_html += '</div></div>'
-                    context = {'data': 'welcome ' + username, 'student_details': details_html}
-                else:
-                    context = {'data': 'welcome ' + username, 'student_details': ''}
+                for student in student_details:
+                    # Map fields
+                    details_html += '<div class="student-info-card">'
+                    details_html += '<h4><i class="fa fa-id-card"></i> Student ID: ' + str(student.student_id) + '</h4>'
+                    details_html += '<p><strong>Name:</strong> ' + str(student.student_name if student.student_name else 'N/A') + '</p>'
+                    details_html += '<p><strong>Gender:</strong> ' + str(student.gender if student.gender else 'N/A') + '</p>'
+                    details_html += '<p><strong>Contact:</strong> ' + str(student.contact if student.contact else 'N/A') + '</p>'
+                    details_html += '<p><strong>Email:</strong> ' + str(student.email if student.email else 'N/A') + '</p>'
+                    details_html += '<p><strong>Course:</strong> ' + str(student.course if student.course else 'N/A') + '</p>'
+                    details_html += '<p><strong>Course Year:</strong> ' + str(student.course_year if student.course_year else 'N/A') + '</p>'
+                    details_html += '<hr style="margin: 10px 0; border: 1px solid #ddd;">'
+                    details_html += '<h5><i class="fa fa-money-bill-wave"></i> Fee Structure:</h5>'
+                    details_html += '<p><strong>Library Fee:</strong> ₹' + str(student.library_fee) + '</p>'
+                    details_html += '<p><strong>Hostel Fee:</strong> ₹' + str(student.hostel_fee) + '</p>'
+                    details_html += '<p><strong>Tution Fee:</strong> ₹' + str(student.tution_fee) + '</p>'
+                    details_html += '<p><strong>Exam Fee:</strong> ₹' + str(student.exam_fee) + '</p>'
+                    details_html += '<p><strong>Lab HOD Fee:</strong> ₹' + str(student.lab_hod_fee) + '</p>'
+                    details_html += '</div>'
+                
+                details_html += '</div></div>'
+                context = {'data': 'welcome ' + username, 'student_details': details_html}
             else:
                 context = {'data': 'welcome ' + username, 'student_details': ''}
             return render(request, 'StudentScreen.html', context)
@@ -1226,8 +1082,8 @@ def ViewPaymentAction(request):
         payments = []
         student_list = []
         
-        # Get student list for dropdown
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+        # 1. Fetch Student List (Using NEW DB)
+        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
         with con:
             cur = con.cursor()
             cur.execute("select student_id from student")
@@ -1235,48 +1091,31 @@ def ViewPaymentAction(request):
             for row in rows:
                 student_list.append(row[0])
         
-        # Get payments for selected student with due amounts
+        # 2. Fetch Payments (Using NEW DB)
         if student:
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
             with con:
                 cur = con.cursor()
-                # Filter by department if logged in as department employee
-                if dept:
-                    # Only show payments for the logged-in department
-                    cur.execute("select * from payments where student_id='"+student+"' and paying_dept='"+dept+"' ORDER BY payment_date ASC, student_id ASC")
-                else:
-                    # Admin can see all payments
-                    cur.execute("select * from payments where student_id='"+student+"' ORDER BY payment_date ASC, student_id ASC")
+                if dept: # If logged in as Employee
+                    cur.execute("select * from payments where student_id='"+student+"' and paying_dept='"+dept+"' ORDER BY payment_date DESC")
+                else: # If logged in as Admin
+                    cur.execute("select * from payments where student_id='"+student+"' ORDER BY payment_date DESC")
+                
                 rows = cur.fetchall()
                 for row in rows:
-                    # row structure: (student_id, course_year, paying_dept, amount, payment_date)
-                    student_id = row[0]
-                    course_year = row[1]
-                    department = row[2]
-                    payment_amount = float(row[3]) if row[3] else 0
-                    payment_date = row[4]
+                    # row: (student_id, year, dept, amount, date)
+                    s_id, year, paying_dept, amount, p_date = row
                     
-                    # Get total fee for this department
-                    total_fee = getDepartmentTotalFee(student_id, course_year, department)
+                    # Calculate Remaining Due dynamically
+                    total_fee = getDepartmentTotalFee(s_id, year, paying_dept)
+                    cumulative_paid = getCumulativePaidAmount(s_id, year, paying_dept, p_date)
                     
-                    # Get cumulative paid amount up to this payment date
-                    cumulative_paid = getCumulativePaidAmount(student_id, course_year, department, payment_date)
+                    remaining = max(0.0, float(total_fee) - float(cumulative_paid))
+                    is_cleared = remaining <= 0
                     
-                    # Calculate remaining due after this payment
-                    total_fee_float = float(total_fee) if total_fee else 0.0
-                    cumulative_paid_float = float(cumulative_paid) if cumulative_paid else 0.0
-                    remaining_due = max(0.0, total_fee_float - cumulative_paid_float)
-                    
-                    # Round to 2 decimal places to avoid floating point precision issues
-                    remaining_due = round(remaining_due, 2)
-                    
-                    
-                    is_cleared = remaining_due <= 0.01
-                    
-                    enhanced_payment = row + (remaining_due, is_cleared)
-                    payments.append(enhanced_payment)
+                    # Append calculated data to row
+                    payments.append(row + (round(remaining, 2), is_cleared))
         
-        # Determine dashboard based on user type (employee has dept set)
         dashboard_link = '/EmployeeScreen.html' if dept else '/AdminScreen.html'
         context = {
             'students': student_list,
@@ -1286,16 +1125,22 @@ def ViewPaymentAction(request):
         }
         return render(request, 'ViewPayments.html', context)
     else:
-        # Get student list for dropdown
+        # Fallback for GET request
+        return ViewPayments(request)
+
+def ViewPayments(request):
+    if request.method == 'GET':
+        global dept
         students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
+        # Connect to NEW DB
+        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
         with con:
             cur = con.cursor()
             cur.execute("select student_id from student")
             rows = cur.fetchall()
             for row in rows:
                 students.append(row[0])
-        # Determine dashboard based on user type (employee has dept set)
+                
         dashboard_link = '/EmployeeScreen.html' if dept else '/AdminScreen.html'
         context = {'students': students, 'payments': [], 'selected_student': '', 'dashboard_link': dashboard_link}
         return render(request, 'ViewPayments.html', context)
@@ -1303,14 +1148,7 @@ def ViewPaymentAction(request):
 def ViewPayments(request):
     if request.method == 'GET':
         global dept
-        students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select student_id from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row[0])
+        students = Student.objects.values_list('student_id', flat=True).distinct()
         # Determine dashboard based on user type (employee has dept set)
         dashboard_link = '/EmployeeScreen.html' if dept else '/AdminScreen.html'
         context = {'students': students, 'payments': [], 'selected_student': '', 'dashboard_link': dashboard_link}
@@ -1318,14 +1156,7 @@ def ViewPayments(request):
 
 def ViewEmployees(request):
     if request.method == 'GET':
-        employees = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select * from employees")
-            rows = cur.fetchall()
-            for row in rows:
-                employees.append(row)
+        employees = Employee.objects.all()
         context= {'employees': employees}
         return render(request, 'ViewEmployees.html', context)
 
@@ -1334,100 +1165,113 @@ def UpdateEmployeeForm(request):
         username = request.GET.get('username', False)
         if username:
             employee_data = None
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-            with con:
-                cur = con.cursor()
-                cur.execute("select * from employees where username='"+username+"'")
-                row = cur.fetchone()
-                if row:
-                    employee_data = row
+            
+            try:
+                # 1. Connect to the NEW database explicitly
+                con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
+                with con:
+                    cur = con.cursor()
+                    # 2. Execute SQL query
+                    cur.execute("select * from employees where username='" + username + "'")
+                    # 3. Fetch data as a tuple
+                    employee_data = cur.fetchone() 
+            except Exception as e:
+                print("Error fetching employee:", e)
+
             if employee_data:
+                # ERROR WAS HERE: Ensure 'context = {' includes the opening brace
                 context = {
                     'employee': employee_data,
                     'data': ''
                 }
                 return render(request, 'UpdateEmployee.html', context)
             else:
-                return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Employee not found.</font>'})
+                return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Employee not found in nodue_new database.</font>'})
         else:
             return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request. Please select an employee to update.</font>'})
     else:
         return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request method.</font>'})
-
 def UpdateEmployeeAction(request):
     if request.method == 'POST':
         old_username = request.POST.get('old_username', False)
-        employee_name = request.POST.get('t1', False)
+        emp_name = request.POST.get('t1', False)
         gender = request.POST.get('t2', False)
         contact = request.POST.get('t3', False)
         email = request.POST.get('t4', False)
         qualification = request.POST.get('t5', False)
         experience = request.POST.get('t6', False)
-        dept_role = request.POST.get('t7', False)
+        role = request.POST.get('t7', False)
         username = request.POST.get('t8', False)
         password = request.POST.get('t9', False)
         
         status = "<font size=3 color=red>Database error occurred</font>"
-        db_connection = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        db_cursor = db_connection.cursor()
         
-        # Based on INSERT order: emp_name, gender, contact, email, qualification, experience, role, username, password
-        # Using column positions or checking actual column names
-        query = "UPDATE employees SET emp_name='"+employee_name+"', gender='"+gender+"', contact_no='"+contact+"', email='"+email+"', qualification='"+qualification+"', experience='"+experience+"', user_role='"+dept_role+"', username='"+username+"', password='"+password+"' WHERE username='"+old_username+"'"
-        db_cursor.execute(query)
-        db_connection.commit()
+        try:
+            # 1. Connect to the NEW database explicitly
+            db_connection = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
+            db_cursor = db_connection.cursor()
+            
+            # 2. Run Raw Update Query
+            # Note: We use parameterized queries (%s) to prevent SQL injection and handle quotes correctly
+            query = """
+                UPDATE employees 
+                SET emp_name=%s, gender=%s, contact_no=%s, email=%s, 
+                    qualification=%s, experience=%s, user_role=%s, 
+                    username=%s, password=%s 
+                WHERE username=%s
+            """
+            # Execute with values in order
+            db_cursor.execute(query, (emp_name, gender, contact, email, qualification, experience, role, username, password, old_username))
+            db_connection.commit()
+            
+            if db_cursor.rowcount >= 0: # rowcount >= 0 because sometimes it's 0 if you save without changing data
+                status = "<font size=3 color=blue>Employee details updated successfully</font>"
+            else:
+                status = "<font size=3 color=red>Failed to update. Employee may not exist.</font>"
+                
+            db_cursor.close()
+            db_connection.close()
+            
+        except Exception as e:
+            status = f"<font size=3 color=red>Error: {str(e)}</font>"
         
-        if db_cursor.rowcount == 1:
-            status = "<font size=3 color=blue>Employee details updated successfully</font>"
-        else:
-            status = "<font size=3 color=red>Failed to update employee. Employee may not exist.</font>"
-        
-        # Return to ViewEmployees page
+        # 3. Fetch Updated List to show on the View page
         employees = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select * from employees")
-            rows = cur.fetchall()
-            for row in rows:
-                employees.append(row)
+        try:
+            con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
+            with con:
+                cur = con.cursor()
+                cur.execute("select * from employees")
+                employees = cur.fetchall() # Returns tuples, which ViewEmployees.html expects
+        except Exception as e:
+            print("Error fetching list:", e)
+
         context = {'employees': employees, 'data': status}
         return render(request, 'ViewEmployees.html', context)
+        
     else:
         return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request method. Please use the form to update employee.</font>'})
 
 def DeleteEmployeeAction(request):
     if request.method == 'POST':
         username = request.POST.get('username', False)
-        if username:
-            status = "<font size=3 color=red>Database error occurred</font>"
-            db_connection = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-            db_cursor = db_connection.cursor()
-            
-            query = "DELETE FROM employees WHERE username='"+username+"'"
-            db_cursor.execute(query)
-            db_connection.commit()
-            
-            if db_cursor.rowcount == 1:
+        
+        try:
+            employee = Employee.objects.filter(username=username).first()
+            if employee:
+                employee.delete()
                 status = "<font size=3 color=blue>Employee deleted successfully</font>"
             else:
                 status = "<font size=3 color=red>Failed to delete employee. Employee may not exist.</font>"
-        else:
-            status = "<font size=3 color=red>Invalid request. Username not provided.</font>"
-        
+        except Exception as e:
+            status = f"<font size=3 color=red>Database error occurred: {str(e)}</font>"
+            
         # Return to ViewEmployees page
-        employees = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select * from employees")
-            rows = cur.fetchall()
-            for row in rows:
-                employees.append(row)
+        employees = Employee.objects.all()
         context = {'employees': employees, 'data': status}
         return render(request, 'ViewEmployees.html', context)
     else:
-        return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request method.</font>'})    
+        return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request method. Please use the form to delete employee.</font>'})
 
 def AddEmployeeAction(request):
     if request.method == 'POST':
@@ -1440,25 +1284,27 @@ def AddEmployeeAction(request):
         role = request.POST.get('t7', False)
         username = request.POST.get('t8', False)
         password = request.POST.get('t9', False)
-        status = "none"
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:    
-            cur = con.cursor()
-            cur.execute("select username FROM employees")
-            rows = cur.fetchall()
-            for row in rows:
-                if row[0] == username:
-                    status = "Username already exists"
-                    break
-        if status == "none":
-            db_connection = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-            db_cursor = db_connection.cursor()
-            student_sql_query = "INSERT INTO employees VALUES('"+emp_name+"','"+gender+"','"+contact+"','"+email+"','"+qualification+"','"+experience+"','"+role+"','"+username+"','"+password+"')"
-            db_cursor.execute(student_sql_query)
-            db_connection.commit()
-            print(db_cursor.rowcount, "Record Inserted")
-            if db_cursor.rowcount == 1:
+        
+        try:
+            if Employee.objects.filter(username=username).exists():
+                status = "Username already exists"
+            else:
+                Employee.objects.create(
+                    emp_name=emp_name,
+                    gender=gender,
+                    contact_no=contact,
+                    email=email,
+                    qualification=qualification,
+                    experience=experience,
+                    user_role=role,
+                    username=username,
+                    password=password
+                )
                 status = "<font size=3 color=blue>Employee details added with User Role as "+role+"</font>"
+        except Exception as e:
+            print(e)
+            status = "<font size=3 color=red>Database error occurred: " + str(e) + "</font>"
+            
         context= {'data': status}
         return render(request, 'AddEmployee.html', context)
     else:
@@ -1467,7 +1313,7 @@ def AddEmployeeAction(request):
 def AddStudentAction(request):
     if request.method == 'POST':
         student_id = request.POST.get('t0', False)
-        student = request.POST.get('t1', False)
+        student_name = request.POST.get('t1', False)
         gender = request.POST.get('t2', False)
         contact = request.POST.get('t3', False)
         email = request.POST.get('t4', False)
@@ -1479,15 +1325,33 @@ def AddStudentAction(request):
         hostel = request.POST.get('t10', False)
         exam = request.POST.get('t11', False)
         hod = request.POST.get('t12', False)
-        status = "<font size=3 color=red>Database error occured</font>"
-        db_connection = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        db_cursor = db_connection.cursor()
-        student_sql_query = "INSERT INTO student VALUES('"+student_id+"','"+student+"','"+gender+"','"+contact+"','"+email+"','"+course+"','"+year+"','"+password+"','"+library+"','"+hostel+"','"+tution+"','"+exam+"','"+hod+"')"
-        db_cursor.execute(student_sql_query)
-        db_connection.commit()
-        print(db_cursor.rowcount, "Record Inserted")
-        if db_cursor.rowcount == 1:
-            status = "<font size=3 color=blue>Student details added with Student ID as "+student_id+"</font>"
+        
+        try:
+            # Check if student already exists
+            if Student.objects.filter(student_id=student_id, course_year=year).exists():
+                status = "<font size=3 color=red>Student ID already exists for this year</font>"
+            else:
+                Student.objects.create(
+                    student_id=student_id,
+                    student_name=student_name,
+                    gender=gender,
+                    contact=contact,
+                    email=email,
+                    address='', # Added default address as it is not in the form
+                    course=course,
+                    course_year=year,
+                    password=password,
+                    tution_fee=float(tution) if tution else 0.0,
+                    library_fee=float(library) if library else 0.0,
+                    hostel_fee=float(hostel) if hostel else 0.0,
+                    exam_fee=float(exam) if exam else 0.0,
+                    lab_hod_fee=float(hod) if hod else 0.0
+                )
+                status = "<font size=3 color=blue>Student details added with Student ID as "+student_id+"</font>"
+        except Exception as e:
+            print(e)
+            status = "<font size=3 color=red>Database error occurred: " + str(e) + "</font>"
+            
         context= {'data': status}
         return render(request, 'AddStudent.html', context)
     else:
@@ -1498,14 +1362,7 @@ def UpdateStudentForm(request):
         student_id = request.GET.get('student_id', False)
         course_year = request.GET.get('course_year', False)
         if student_id and course_year:
-            student_data = None
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-            with con:
-                cur = con.cursor()
-                cur.execute("select * from student where student_id='"+student_id+"' and course_year='"+course_year+"'")
-                row = cur.fetchone()
-                if row:
-                    student_data = row
+            student_data = Student.objects.filter(student_id=student_id, course_year=course_year).first()
             if student_data:
                 context = {
                     'student': student_data,
@@ -1537,28 +1394,34 @@ def UpdateStudentAction(request):
         exam = request.POST.get('t11', False)
         hod = request.POST.get('t12', False)
         
-        status = "<font size=3 color=red>Database error occurred</font>"
-        db_connection = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        db_cursor = db_connection.cursor()
-        
-        query = "UPDATE student SET student_id='"+student_id+"', student_name='"+student_name+"', gender='"+gender+"', contact_no='"+contact+"', email='"+email+"', course='"+course+"', course_year='"+year+"', password='"+password+"', library_fee='"+library+"', hostel_fee='"+hostel+"', tution_fee='"+tution+"', exam_fee='"+exam+"', lab_hod_fee='"+hod+"' WHERE student_id='"+old_student_id+"' AND course_year='"+old_course_year+"'"
-        db_cursor.execute(query)
-        db_connection.commit()
-        
-        if db_cursor.rowcount == 1:
-            status = "<font size=3 color=blue>Student details updated successfully</font>"
-        else:
-            status = "<font size=3 color=red>Failed to update student. Student may not exist.</font>"
+        try:
+            # Check if student exists
+            student_obj = Student.objects.filter(student_id=old_student_id, course_year=old_course_year).first()
+            if student_obj:
+                # Update fields
+                student_obj.student_id = student_id
+                student_obj.student_name = student_name
+                student_obj.gender = gender
+                student_obj.contact = contact
+                student_obj.email = email
+                student_obj.course = course
+                student_obj.course_year = year
+                student_obj.password = password
+                student_obj.tution_fee = float(tution) if tution else 0.0
+                student_obj.library_fee = float(library) if library else 0.0
+                student_obj.hostel_fee = float(hostel) if hostel else 0.0
+                student_obj.exam_fee = float(exam) if exam else 0.0
+                student_obj.lab_hod_fee = float(hod) if hod else 0.0
+                student_obj.save()
+                
+                status = "<font size=3 color=blue>Student details updated successfully</font>"
+            else:
+                status = "<font size=3 color=red>Failed to update student. Student may not exist.</font>"
+        except Exception as e:
+            status = f"<font size=3 color=red>Database error occurred: {str(e)}</font>"
         
         # Return to ViewStudents page
-        students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select * from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row)
+        students = Student.objects.all()
         context = {'students': students, 'data': status}
         return render(request, 'ViewStudents.html', context)
     else:
@@ -1568,35 +1431,23 @@ def DeleteStudentAction(request):
     if request.method == 'POST':
         student_id = request.POST.get('student_id', False)
         course_year = request.POST.get('course_year', False)
-        if student_id and course_year:
-            status = "<font size=3 color=red>Database error occurred</font>"
-            db_connection = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-            db_cursor = db_connection.cursor()
-            
-            query = "DELETE FROM student WHERE student_id='"+student_id+"' AND course_year='"+course_year+"'"
-            db_cursor.execute(query)
-            db_connection.commit()
-            
-            if db_cursor.rowcount == 1:
+        
+        try:
+            student = Student.objects.filter(student_id=student_id, course_year=course_year).first()
+            if student:
+                student.delete()
                 status = "<font size=3 color=blue>Student deleted successfully</font>"
             else:
                 status = "<font size=3 color=red>Failed to delete student. Student may not exist.</font>"
-        else:
-            status = "<font size=3 color=red>Invalid request. Student ID and Course Year not provided.</font>"
-        
+        except Exception as e:
+            status = f"<font size=3 color=red>Database error occurred: {str(e)}</font>"
+            
         # Return to ViewStudents page
-        students = []
-        con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue',charset='utf8')
-        with con:
-            cur = con.cursor()
-            cur.execute("select * from student")
-            rows = cur.fetchall()
-            for row in rows:
-                students.append(row)
+        students = Student.objects.all()
         context = {'students': students, 'data': status}
         return render(request, 'ViewStudents.html', context)
     else:
-        return render(request, 'ViewStudents.html', {'students': [], 'data': '<font size=3 color=red>Invalid request method.</font>'})
+        return render(request, 'ViewStudents.html', {'students': [], 'data': '<font size=3 color=red>Invalid request method. Please use the form to delete student.</font>'})
     
 
 
@@ -1605,8 +1456,7 @@ def DeleteStudentAction(request):
 
 # --- NEW AI & PAYMENT FUNCTIONS START HERE ---
 
-# Initialize Zero-Shot Classifier
-classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
 
 def analyze_document_content(file_path, expected_category):
     """
@@ -1630,7 +1480,7 @@ def analyze_document_content(file_path, expected_category):
         candidate_labels = ["tuition fee receipt", "library no due certificate", "hostel clearance form", "medical certificate", "irrelevant document"]
 
         # 3. Perform AI Classification
-        result = classifier(text_content, candidate_labels)
+        result = get_classifier()(text_content, candidate_labels)
         
         # Get the highest scoring label
         top_label = result['labels'][0]
@@ -1676,30 +1526,38 @@ def UploadDocument(request):
         # 4. Update Database
         status_text = "Cleared" if is_valid else "Rejected"
         
-        con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue', charset='utf8')
-        with con:
-            cur = con.cursor()
-            # Store the document record (using raw SQL for consistency with your project)
-            # Note: Ensure the document_submissions table exists (created via models.py migration or manually)
-            cur.execute("""
-                INSERT INTO document_submissions (student_id, department, file_path, ai_verification_status, ai_confidence_score)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (student_id, dept, file_path, status_text, confidence))
+        # 4. Update Database
+        status_text = "Cleared" if is_valid else "Rejected"
+        
+        try:
+            # Create DocumentSubmission record
+            DocumentSubmission.objects.create(
+                student_id=student_id,
+                department=dept,
+                file_path=filename, # storing filename relative to media root
+                ai_verification_status=status_text,
+                ai_confidence_score=confidence
+            )
             
             # IF AI verifies it, automatically update the main student fee table
             if is_valid:
-                # We assume current year for update logic; finding year:
-                cur.execute("select course_year from student where student_id=%s ORDER BY course_year DESC LIMIT 1", (student_id,))
-                yr_row = cur.fetchone()
-                year = yr_row[0] if yr_row else ""
+                # Find the student with the latest course year
+                student = Student.objects.filter(student_id=student_id).order_by('-course_year').first()
                 
-                if year:
+                if student:
                     if dept == "Library":
-                        cur.execute("UPDATE student SET library_fee = 0 WHERE student_id = %s AND course_year = %s", (student_id, year))
+                        student.library_fee = 0
                     elif dept == "Accounts":
-                        cur.execute("UPDATE student SET tution_fee = 0 WHERE student_id = %s AND course_year = %s", (student_id, year))
+                        student.tution_fee = 0
                     elif dept == "Hostel":
-                        cur.execute("UPDATE student SET hostel_fee = 0 WHERE student_id = %s AND course_year = %s", (student_id, year))
+                        student.hostel_fee = 0
+                    # Add other departments as needed
+                    student.save()
+                    
+        except Exception as e:
+            print(f"Error updating database: {e}")
+            return render(request, 'StudentScreen.html', {'data': f"<div class='alert-message error'>Database error: {str(e)}</div>"})
+
 
         # 5. Return response to UI
         if is_valid:
@@ -1725,7 +1583,7 @@ def StudentPayDues(request):
             
         student_id = uname
         year = ""
-        con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue', charset='utf8')
+        con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='geminidatabase', charset='utf8')
         with con:
             cur = con.cursor()
             cur.execute("select course_year from student where student_id=%s ORDER BY course_year DESC LIMIT 1", (student_id,))
@@ -1782,7 +1640,7 @@ def StudentPayDuesAction(request):
             amount_val = float(amount)
             dd = str(date.today())
             
-            con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue', charset='utf8')
+            con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='geminidatabase', charset='utf8')
             with con:
                 cur = con.cursor()
                 insert_query = "INSERT INTO payments (student_id, course_year, paying_dept, amount, payment_date) VALUES (%s, %s, %s, %s, %s)"
@@ -1796,3 +1654,274 @@ def StudentPayDuesAction(request):
             return render(request, 'StudentScreen.html', {'data': f"<div class='alert-message error'>Error processing payment: {str(e)}</div>"})
 
     return redirect('StudentScreen')
+
+
+
+
+
+
+
+
+
+
+def get_fee_receipt(student_id, department, amount, date_str):
+    """
+    Generates a PDF Fee Receipt for a single transaction.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                            rightMargin=0.75*inch, leftMargin=0.75*inch,
+                            topMargin=0.5*inch, bottomMargin=0.5*inch)
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # --- Title ---
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=TA_CENTER, fontSize=24, spaceAfter=20)
+    elements.append(Paragraph("OFFICIAL FEE RECEIPT", title_style))
+    elements.append(Spacer(1, 0.2*inch))
+
+    # --- Receipt Details Table ---
+    # We construct a simple table for the receipt info
+    data = [
+        ["Receipt No:", hashlib.sha256((student_id + date_str + department).encode()).hexdigest()[:10].upper()],
+        ["Date:", date_str],
+        ["Student ID:", student_id],
+        ["Department:", department],
+        ["Payment Mode:", "Credit Card / Online"],
+        ["Amount Paid:", f"Rs. {amount}"],
+        ["Payment Status:", "SUCCESSFUL"]
+    ]
+
+    t = Table(data, colWidths=[2.5*inch, 3*inch])
+    t.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (1,0), (1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 12),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (0,-1), colors.lightgrey),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 0.5*inch))
+
+    # --- Footer / Verification Note ---
+    # This text is crucial for the AI to "read" and verify the document later
+    note_style = ParagraphStyle('Note', parent=styles['Normal'], fontSize=10, textColor=colors.grey)
+    elements.append(Paragraph(f"This document certifies that {student_id} has cleared the dues for {department}.", styles['Normal']))
+    elements.append(Spacer(1, 0.1*inch))
+    elements.append(Paragraph("This is a computer-generated receipt valid for AI Document Verification.", note_style))
+
+    doc.build(elements)
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    
+    filename = f"Receipt_{student_id}_{department}.pdf"
+    return filename, pdf_data
+
+
+
+
+
+
+def StudentPayDuesAction(request):
+    if request.method == 'POST':
+        student_id = request.POST.get('student_id')
+        year = request.POST.get('year')
+        dept = request.POST.get('department')
+        amount = request.POST.get('amount')
+        
+        if not amount or float(amount) <= 0:
+             return render(request, 'StudentScreen.html', {'data': "<div class='alert-message error'>Invalid amount.</div>"})
+
+        try:
+            amount_val = float(amount)
+            dd = str(date.today())
+            
+            con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
+            with con:
+                cur = con.cursor()
+                insert_query = "INSERT INTO payments (student_id, course_year, paying_dept, amount, payment_date) VALUES (%s, %s, %s, %s, %s)"
+                cur.execute(insert_query, (student_id, year, dept, amount_val, dd))
+                con.commit()
+            
+            # --- GENERATE RECEIPT ---
+            filename, pdf_data = get_fee_receipt(student_id, dept, amount, dd)
+            
+            # Return the PDF as a download
+            response = HttpResponse(pdf_data, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+            
+        except Exception as e:
+            return render(request, 'StudentScreen.html', {'data': f"<div class='alert-message error'>Error processing payment: {str(e)}</div>"})
+
+    return redirect('StudentScreen')
+
+
+
+
+def AcceptFeeAction(request):
+    if request.method == 'POST':
+        global uname, dept # Assumes dept is the logged-in employee's department
+        student = request.POST.get('t1', False)
+        fee = request.POST.get('t2', False)
+        year = request.POST.get('t3', False)
+        
+        # ... [Keep your existing validation logic here] ...
+        
+        try:
+            db_connection = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
+            with db_connection:
+                db_cursor = db_connection.cursor()
+                
+                # Check student existence logic...
+                # (Keep your existing check_query logic here)
+
+                # Insert Payment
+                dd = str(date.today())
+                insert_query = "INSERT INTO payments (student_id, course_year, paying_dept, amount, payment_date) VALUES (%s, %s, %s, %s, %s)"
+                db_cursor.execute(insert_query, (student, year, dept, fee, dd))
+                db_connection.commit()
+                
+                # --- GENERATE RECEIPT ---
+                filename, pdf_data = get_fee_receipt(student, dept, fee, dd)
+                
+                # Return the PDF as a download
+                response = HttpResponse(pdf_data, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+
+        except Exception as e:
+            status = "<div class='alert-message error'>Error: " + str(e) + "</div>"
+            return render(request, 'EmployeeScreen.html', {'data': status})
+            
+    # Handle GET or other cases...
+    return render(request, 'EmployeeScreen.html', {'data': 'Invalid Request'})
+
+
+
+# --- AI Configuration ---
+# Initialize Zero-Shot Classifier (Downloads model on first run)
+classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+def analyze_document_content(file_path, expected_category):
+    """
+    Helper function: Extracts text from a PDF and uses AI to verify it.
+    """
+    try:
+        # 1. Extract Text from PDF
+        text_content = ""
+        with open(file_path, 'rb') as f:
+            pdf_reader = PyPDF2.PdfReader(f)
+            for page in pdf_reader.pages:
+                text_content += page.extract_text()
+        
+        # Limit text to first 1000 chars for speed
+        text_content = text_content[:1000]
+
+        if not text_content.strip():
+            return False, 0.0, "Empty or unreadable document"
+
+        # 2. Define labels the AI looks for
+        candidate_labels = ["tuition fee receipt", "library no due certificate", "hostel clearance form", "medical certificate", "irrelevant document"]
+
+        # 3. Perform AI Classification
+        result = classifier(text_content, candidate_labels)
+        
+        # Get the highest scoring label
+        top_label = result['labels'][0]
+        confidence = result['scores'][0]
+
+        # 4. Decision Logic (Threshold 0.6 means 60% confidence)
+        if top_label == expected_category and confidence > 0.6:
+            return True, confidence, f"Verified as {top_label}"
+        else:
+            return False, confidence, f"Document appears to be {top_label}, but expected {expected_category}"
+
+    except Exception as e:
+        return False, 0.0, str(e)
+
+
+def UploadDocument(request):
+    """
+    View to handle file upload and save to 'nodue_new' database.
+    """
+    if request.method == 'POST':
+        global uname
+        student_id = request.POST.get('student_id')
+        dept = request.POST.get('department')
+        
+        # Check if file is selected
+        if 'document' not in request.FILES:
+             msg = "<div class='alert alert-danger'>No file uploaded.</div>"
+             return render(request, 'StudentScreen.html', {'data': msg})
+             
+        uploaded_file = request.FILES['document']
+        
+        # 1. Save the file to media directory
+        fs = FileSystemStorage()
+        filename = fs.save(uploaded_file.name, uploaded_file)
+        file_path = fs.path(filename)
+
+        # 2. Determine expected document type
+        expected_category = "irrelevant document"
+        if dept == "Accounts":
+            expected_category = "tuition fee receipt"
+        elif dept == "Library":
+            expected_category = "library no due certificate"
+        elif dept == "Hostel":
+            expected_category = "hostel clearance form"
+
+        # 3. Call AI Verification
+        is_valid, confidence, message = analyze_document_content(file_path, expected_category)
+
+        # 4. Update Database (nodue_new)
+        status_text = "Cleared" if is_valid else "Rejected"
+        
+        try:
+            # Connect to NEW database
+            con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
+            with con:
+                cur = con.cursor()
+                
+                # Insert document record
+                insert_query = """
+                    INSERT INTO document_submissions 
+                    (student_id, department, file_path, ai_verification_status, ai_confidence_score)
+                    VALUES (%s, %s, %s, %s, %s)
+                """
+                cur.execute(insert_query, (student_id, dept, file_path, status_text, confidence))
+                
+                # IF AI verifies it, update the student's main fee record
+                if is_valid:
+                    # Find the student's latest year
+                    cur.execute("select course_year from student where student_id=%s ORDER BY course_year DESC LIMIT 1", (student_id,))
+                    yr_row = cur.fetchone()
+                    year = yr_row[0] if yr_row else ""
+                    
+                    if year:
+                        if dept == "Library":
+                            cur.execute("UPDATE student SET library_fee = 0 WHERE student_id = %s AND course_year = %s", (student_id, year))
+                        elif dept == "Accounts":
+                            cur.execute("UPDATE student SET tution_fee = 0 WHERE student_id = %s AND course_year = %s", (student_id, year))
+                        elif dept == "Hostel":
+                            cur.execute("UPDATE student SET hostel_fee = 0 WHERE student_id = %s AND course_year = %s", (student_id, year))
+                            
+            con.commit()
+
+            # 5. Success/Failure Message
+            if is_valid:
+                msg = f"<div class='alert alert-success'><strong>AI Verification Successful!</strong><br>Confidence: {confidence*100:.1f}%<br>Status: Your {dept} due is now CLEARED.</div>"
+            else:
+                msg = f"<div class='alert alert-danger'><strong>AI Verification Failed.</strong><br>Reason: {message}<br>Please upload a valid {expected_category}.</div>"
+                
+            return render(request, 'StudentScreen.html', {'data': msg})
+
+        except Exception as e:
+            msg = f"<div class='alert alert-danger'>Database Error: {str(e)}</div>"
+            return render(request, 'StudentScreen.html', {'data': msg})
+
+    # GET Request: Show the upload form
+    global uname
+    return render(request, 'UploadDocument.html', {'student_id': uname})

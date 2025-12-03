@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- Basic -->
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">   
-   
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
     <!-- Mobile Metas -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
- 
-     <!-- Site Metas -->
-    <title>View Employees - AI-Based Automated Clearance System</title>  
+
+    <!-- Site Metas -->
+    <title>View Employees - AI-Based Automated Clearance System</title>
     <meta name="keywords" content="">
     <meta name="description" content="">
     <meta name="author" content="">
 
     <!-- Icon Font Stylesheet -->
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css" />
 
     <!-- Site Icons -->
     <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon" />
@@ -41,52 +42,57 @@
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 </head>
-<body class="host_version"> 
+
+<body class="host_version">
 
     <!-- LOADER -->
-	<div id="preloader">
-		<div class="loader-container">
-			<div class="progress-br float shadow">
-				<div class="progress__item"></div>
-			</div>
-		</div>
-	</div>
-	<!-- END LOADER -->	
-	
-	<!-- Start header -->
-	<header class="top-navbar">
-		<nav class="navbar navbar-expand-lg navbar-light bg-light">
-			<div class="container-fluid">
-				<a class="navbar-brand p-0" href="/">
-					<h1 class="text-white" style="font-size: xx-large;" ><i class="fa fa-certificate fa-1x me-2"></i> AI<span style="color: #eea412;">Clearance</span></h1>
-				</a>                                  
-				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbars-host" aria-controls="navbars-rs-food" aria-expanded="false" aria-label="Toggle navigation">
-					<span class="icon-bar"></span>
+    <div id="preloader">
+        <div class="loader-container">
+            <div class="progress-br float shadow">
+                <div class="progress__item"></div>
+            </div>
+        </div>
+    </div>
+    <!-- END LOADER -->
+
+    <!-- Start header -->
+    <header class="top-navbar">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand p-0" href="/">
+                    <h1 class="text-white" style="font-size: xx-large;"><i class="fa fa-certificate fa-1x me-2"></i>
+                        AI<span style="color: #eea412;">Clearance</span></h1>
+                </a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbars-host"
+                    aria-controls="navbars-rs-food" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
-				</button>
-				<div class="collapse navbar-collapse" id="navbars-host">
-					<ul class="navbar-nav ml-auto">
-						<li class="nav-item"><a class="nav-link" href="/AdminScreen.html">Back to Dashboard</a></li>
-						<li class="nav-item"><a class="nav-link" href="/">Logout</a></li>						
-					</ul>					
-				</div>
-			</div>
-		</nav>
-	</header>
-	<!-- End header -->
-	
-	<div class="dashboard-container">
+                    <span class="icon-bar"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbars-host">
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item"><a class="nav-link" href="/AdminScreen.html">Back to Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <!-- End header -->
+
+    <div class="dashboard-container">
         <div class="welcome-message">
             <h2><i class="fa fa-users"></i> View All Employees</h2>
         </div>
 
         {% if employees %}
-        <div class="filter-container" style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+        <div class="filter-container"
+            style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
             <label for="roleFilter" style="font-weight: bold; margin-right: 10px; color: #333;">
                 <i class="fa fa-filter"></i> Filter by Role:
             </label>
-            <select id="roleFilter" style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 200px; cursor: pointer;">
+            <select id="roleFilter"
+                style="padding: 8px 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 200px; cursor: pointer;">
                 <option value="all">All Roles</option>
             </select>
             <span id="filterCount" style="margin-left: 15px; color: #666; font-size: 14px;"></span>
@@ -95,7 +101,8 @@
 
         <div class="data-display">
             {% if data %}
-            <div class="status-message {% if 'success' in data|lower or 'updated' in data|lower or 'deleted' in data|lower %}success{% else %}error{% endif %}">
+            <div
+                class="status-message {% if 'success' in data|lower or 'updated' in data|lower or 'deleted' in data|lower %}success{% else %}error{% endif %}">
                 {{ data|safe }}
             </div>
             {% endif %}
@@ -118,24 +125,26 @@
                     </thead>
                     <tbody id="employeeTableBody">
                         {% for employee in employees %}
-                        <tr data-role="{{ employee.6 }}">
-                            <td>{{ employee.0 }}</td>
-                            <td>{{ employee.1 }}</td>
-                            <td>{{ employee.2 }}</td>
-                            <td>{{ employee.3 }}</td>
-                            <td>{{ employee.4 }}</td>
-                            <td>{{ employee.5 }}</td>
-                            <td>{{ employee.6 }}</td>
-                            <td>{{ employee.7 }}</td>
-                            <td>{{ employee.8 }}</td>
+                        <tr data-role="{{ employee.user_role }}">
+                            <td>{{ employee.emp_name }}</td>
+                            <td>{{ employee.gender }}</td>
+                            <td>{{ employee.contact_no }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>{{ employee.qualification }}</td>
+                            <td>{{ employee.experience }}</td>
+                            <td>{{ employee.user_role }}</td>
+                            <td>{{ employee.username }}</td>
+                            <td>{{ employee.password }}</td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="/UpdateEmployeeForm?username={{ employee.7 }}" class="btn-update" title="Update Employee">
+                                    <a href="/UpdateEmployeeForm?username={{ employee.username }}" class="btn-update"
+                                        title="Update Employee">
                                         <i class="fa fa-edit"></i> Update
                                     </a>
-                                    <form method="POST" action="/DeleteEmployeeAction" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this employee?');">
+                                    <form method="POST" action="/DeleteEmployeeAction" style="display: inline;"
+                                        onsubmit="return confirm('Are you sure you want to delete this employee?');">
                                         {% csrf_token %}
-                                        <input type="hidden" name="username" value="{{ employee.7 }}">
+                                        <input type="hidden" name="username" value="{{ employee.username }}">
                                         <button type="submit" class="btn-delete" title="Delete Employee">
                                             <i class="fa fa-trash"></i> Delete
                                         </button>
@@ -158,8 +167,9 @@
     <div class="copyrights">
         <div class="container">
             <div class="footer-distributed">
-                <div class="footer-center">                   
-                    <p class="footer-company-name">All Rights Reserved. © 2018 SmartEDU Design By : html design, Modified By: "Your Name"</p>
+                <div class="footer-center">
+                    <p class="footer-company-name">All Rights Reserved. © 2018 SmartEDU Design By : html design,
+                        Modified By: "Your Name"</p>
                 </div>
             </div>
         </div>
@@ -171,71 +181,71 @@
     <script src="../static/js/all.js"></script>
     <!-- ALL PLUGINS -->
     <script src="../static/js/custom.js"></script>
-	<script src="../static/js/timeline.min.js"></script>
-	
-	<!-- Role Filter Script -->
-	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			const roleFilter = document.getElementById('roleFilter');
-			const employeeTableBody = document.getElementById('employeeTableBody');
-			const filterCount = document.getElementById('filterCount');
-			
-			if (roleFilter && employeeTableBody) {
-				// Collect unique roles from table rows
-				const rows = employeeTableBody.getElementsByTagName('tr');
-				const uniqueRoles = new Set();
-				
-				for (let i = 0; i < rows.length; i++) {
-					const rowRole = rows[i].getAttribute('data-role');
-					if (rowRole) {
-						uniqueRoles.add(rowRole);
-					}
-				}
-				
-				// Populate dropdown with unique roles (sorted)
-				const sortedRoles = Array.from(uniqueRoles).sort();
-				sortedRoles.forEach(function(role) {
-					const option = document.createElement('option');
-					option.value = role;
-					option.textContent = role;
-					roleFilter.appendChild(option);
-				});
-				
-				// Initial count
-				updateFilterCount();
-				
-				// Filter on change
-				roleFilter.addEventListener('change', function() {
-					const selectedRole = this.value;
-					let visibleCount = 0;
-					
-					for (let i = 0; i < rows.length; i++) {
-						const row = rows[i];
-						const rowRole = row.getAttribute('data-role');
-						
-						if (selectedRole === 'all' || rowRole === selectedRole) {
-							row.style.display = '';
-							visibleCount++;
-						} else {
-							row.style.display = 'none';
-						}
-					}
-					
-					updateFilterCount(visibleCount, rows.length);
-				});
-				
-				function updateFilterCount(visible, total) {
-					if (filterCount) {
-						if (visible !== undefined && total !== undefined) {
-							filterCount.textContent = `Showing ${visible} of ${total} employees`;
-						} else {
-							filterCount.textContent = `Total: ${rows.length} employees`;
-						}
-					}
-				}
-			}
-		});
-	</script>
-</body>
-</html>
+    <script src="../static/js/timeline.min.js"></script>
 
+    <!-- Role Filter Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const roleFilter = document.getElementById('roleFilter');
+            const employeeTableBody = document.getElementById('employeeTableBody');
+            const filterCount = document.getElementById('filterCount');
+
+            if (roleFilter && employeeTableBody) {
+                // Collect unique roles from table rows
+                const rows = employeeTableBody.getElementsByTagName('tr');
+                const uniqueRoles = new Set();
+
+                for (let i = 0; i < rows.length; i++) {
+                    const rowRole = rows[i].getAttribute('data-role');
+                    if (rowRole) {
+                        uniqueRoles.add(rowRole);
+                    }
+                }
+
+                // Populate dropdown with unique roles (sorted)
+                const sortedRoles = Array.from(uniqueRoles).sort();
+                sortedRoles.forEach(function (role) {
+                    const option = document.createElement('option');
+                    option.value = role;
+                    option.textContent = role;
+                    roleFilter.appendChild(option);
+                });
+
+                // Initial count
+                updateFilterCount();
+
+                // Filter on change
+                roleFilter.addEventListener('change', function () {
+                    const selectedRole = this.value;
+                    let visibleCount = 0;
+
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        const rowRole = row.getAttribute('data-role');
+
+                        if (selectedRole === 'all' || rowRole === selectedRole) {
+                            row.style.display = '';
+                            visibleCount++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    }
+
+                    updateFilterCount(visibleCount, rows.length);
+                });
+
+                function updateFilterCount(visible, total) {
+                    if (filterCount) {
+                        if (visible !== undefined && total !== undefined) {
+                            filterCount.textContent = `Showing ${visible} of ${total} employees`;
+                        } else {
+                            filterCount.textContent = `Total: ${rows.length} employees`;
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

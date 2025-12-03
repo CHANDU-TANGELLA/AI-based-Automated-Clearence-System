@@ -68,7 +68,7 @@
                             <div id="paymentArea" style="display:none; margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
                                 <h4 class="mb-3">Confirm Payment</h4>
                                 <form action="/StudentPayDuesAction" method="post">
-                                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                    {% csrf_token %}
                                     <input type="hidden" name="student_id" value="{{ student_id }}">
                                     <input type="hidden" name="year" value="{{ year }}">
                                     <input type="hidden" name="department" id="pay_dept">
