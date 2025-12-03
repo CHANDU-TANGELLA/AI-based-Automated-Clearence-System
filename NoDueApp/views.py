@@ -84,7 +84,7 @@ def sendEmail(email, msg):
 
 def getMail(student):
     email = ""
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
+    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
     with con:
         cur = con.cursor()
         cur.execute("select email from student where student_id='"+student+"'")
@@ -156,7 +156,7 @@ def getStudentDetails(student_id, year):
     """Get student name and course details from database"""
     student_name = ""
     course = ""
-    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
+    con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
     with con:
         cur = con.cursor()
         cur.execute("select student_name, course from student where student_id='"+student_id+"' and course_year='"+year+"'")
@@ -853,7 +853,7 @@ def VerifyCertificate(request):
             student_name, course = getStudentDetails(student_id, year)
             
             # Check if student exists and has cleared dues
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
+            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
             with con:
                 cur = con.cursor()
                 cur.execute("select * from student where student_id='"+student_id+"' and course_year='"+year+"'")
@@ -952,7 +952,7 @@ def StudentScreen(request):
         student_details = []
         if uname:
             # Fetch all student records for this student_id (multiple course years possible)
-            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'geminidatabase',charset='utf8')
+            con = pymysql.connect(host='127.0.0.1',port = 3306,user = 'root', password = 'root', database = 'nodue_new',charset='utf8')
             with con:
                 cur = con.cursor()
                 cur.execute("select * from student where student_id='"+uname+"' ORDER BY course_year DESC")
@@ -1207,12 +1207,11 @@ def UpdateEmployeeAction(request):
         status = "<font size=3 color=red>Database error occurred</font>"
         
         try:
-            # 1. Connect to the NEW database explicitly
+            # Connect to 'nodue_new'
             db_connection = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
             db_cursor = db_connection.cursor()
             
-            # 2. Run Raw Update Query
-            # Note: We use parameterized queries (%s) to prevent SQL injection and handle quotes correctly
+            # Execute Raw SQL Update
             query = """
                 UPDATE employees 
                 SET emp_name=%s, gender=%s, contact_no=%s, email=%s, 
@@ -1220,11 +1219,10 @@ def UpdateEmployeeAction(request):
                     username=%s, password=%s 
                 WHERE username=%s
             """
-            # Execute with values in order
             db_cursor.execute(query, (emp_name, gender, contact, email, qualification, experience, role, username, password, old_username))
             db_connection.commit()
             
-            if db_cursor.rowcount >= 0: # rowcount >= 0 because sometimes it's 0 if you save without changing data
+            if db_cursor.rowcount >= 0:
                 status = "<font size=3 color=blue>Employee details updated successfully</font>"
             else:
                 status = "<font size=3 color=red>Failed to update. Employee may not exist.</font>"
@@ -1235,22 +1233,21 @@ def UpdateEmployeeAction(request):
         except Exception as e:
             status = f"<font size=3 color=red>Error: {str(e)}</font>"
         
-        # 3. Fetch Updated List to show on the View page
+        # Fetch updated list for display
         employees = []
         try:
             con = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='root', database='nodue_new', charset='utf8')
             with con:
                 cur = con.cursor()
                 cur.execute("select * from employees")
-                employees = cur.fetchall() # Returns tuples, which ViewEmployees.html expects
+                employees = cur.fetchall()
         except Exception as e:
             print("Error fetching list:", e)
 
         context = {'employees': employees, 'data': status}
         return render(request, 'ViewEmployees.html', context)
-        
     else:
-        return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request method. Please use the form to update employee.</font>'})
+        return render(request, 'ViewEmployees.html', {'employees': [], 'data': '<font size=3 color=red>Invalid request method.</font>'})
 
 def DeleteEmployeeAction(request):
     if request.method == 'POST':

@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'NoDue.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'geminidatabase',
+        'NAME': 'nodue_new',  # Changed from 'nodue'
         'USER': 'root',
         'PASSWORD': 'root',
         'HOST': '127.0.0.1',
