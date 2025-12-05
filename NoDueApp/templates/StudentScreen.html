@@ -25,7 +25,7 @@
 		<nav class="navbar navbar-expand-lg navbar-light bg-light">
 			<div class="container-fluid">
 				<a class="navbar-brand p-0" href="/">
-                    <h1 class="text-white" style="font-size: xx-large;">
+					<h1 class="text-white" style="font-size: xx-large;">
                         <i class="fa fa-university fa-1x me-2"></i> Vishnu Institute<span style="color: #eea412;"> Technology</span>
                     </h1>
 				</a>
@@ -114,14 +114,28 @@
                 </div>
             </div>
             {% endfor %}
-        {% else %}
-            <div class="alert alert-info">Loading student data...</div>
         {% endif %}
         
         {% if data %}
             <div class="alert alert-info mt-3" role="alert">
                 {{ data|safe }}
             </div>
+            
+            {% if is_cleared == 'yes' %}
+            <div class="text-center mt-4 p-3" style="background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 10px;">
+                <h4 class="text-success"><i class="fa fa-check-circle"></i> Clearance Verified!</h4>
+                <p>Your certificate is ready. Choose a format to download:</p>
+                
+                <div class="btn-group" role="group">
+                    <a href="/Download?type=certificate" class="btn btn-primary btn-lg">
+                        <i class="fa fa-file-pdf"></i> Download PDF Certificate
+                    </a>
+                    <a href="/Download?type=qr" class="btn btn-info btn-lg">
+                        <i class="fa fa-qrcode"></i> Download QR Code
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         {% endif %}
 
     </div>

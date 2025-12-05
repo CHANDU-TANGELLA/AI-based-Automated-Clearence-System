@@ -478,14 +478,45 @@ def AddStudentAction(request):
 
 def ViewStudents(request):
     global dept
-    students = []
-    con = get_db_connection()
-    with con:
-        cur = con.cursor()
-        cur.execute("select * from student")
-        students = cur.fetchall()
+    student_data = []
+    try:
+        con = get_db_connection()
+        with con:
+            cur = con.cursor()
+            cur.execute("select * from student ORDER BY student_id ASC")
+            rows = cur.fetchall()
+            
+            for row in rows:
+                s_id = row[0]
+                year = row[7]
+                
+                total = getTotalFee(s_id, year)
+                paid = getPaidFee(s_id, year)
+                
+                total_sum = sum(total)
+                paid_sum = sum(paid)
+                due_sum = max(0, total_sum - paid_sum)
+                
+                # Detailed breakdown strings (Total/Paid)
+                lib_str = f"{total[0]}/{paid[0]}"
+                hos_str = f"{total[1]}/{paid[1]}"
+                tut_str = f"{total[2]}/{paid[2]}"
+                exm_str = f"{total[3]}/{paid[3]}"
+                lab_str = f"{total[4]}/{paid[4]}"
+                
+                student_info = {
+                    'id': row[0], 'name': row[1], 'contact': row[3], 'email': row[4], 
+                    'course': row[6], 'year': row[7],
+                    'total_fee': total_sum, 'paid_fee': paid_sum, 'due_fee': due_sum,
+                    'lib': lib_str, 'hos': hos_str, 'tut': tut_str, 'exm': exm_str, 'lab': lab_str
+                }
+                student_data.append(student_info)
+                
+    except Exception as e:
+        print(f"Error fetching students: {e}")
+        
     link = '/EmployeeScreen.html' if dept else '/AdminScreen.html'
-    return render(request, 'ViewStudents.html', {'students': students, 'dashboard_link': link})
+    return render(request, 'ViewStudents.html', {'students': student_data, 'dashboard_link': link})
 
 def UpdateStudentForm(request):
     sid = request.GET.get('student_id')
@@ -566,6 +597,54 @@ def AcceptFeeAction(request):
         except Exception as e:
             return render(request, 'EmployeeScreen.html', {'data': f'Error: {e}'})
     return AcceptFee(request)
+
+
+def get_fee_receipt(student_id, department, amount, date_str):
+    """Generates a Professional Fee Receipt PDF"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.75*inch, leftMargin=0.75*inch, topMargin=0.75*inch, bottomMargin=0.75*inch)
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Try to load logo
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(current_dir, 'static', 'css', 'logo_red.png')
+    if os.path.exists(logo_path):
+        logo = RLImage(logo_path, width=2*inch, height=0.5*inch, kind='proportional')
+        elements.append(logo)
+    
+    elements.append(Spacer(1, 0.1*inch))
+    elements.append(Paragraph("VISHNU INSTITUTE OF TECHNOLOGY", ParagraphStyle('H1', parent=styles['Heading1'], alignment=TA_CENTER, fontSize=18, textColor=HexColor('#1a237e'))))
+    elements.append(Paragraph("OFFICIAL FEE RECEIPT", ParagraphStyle('H2', parent=styles['Heading2'], alignment=TA_CENTER, fontSize=14, spaceAfter=20)))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    receipt_no = hashlib.sha256((str(student_id) + str(date_str) + str(department)).encode()).hexdigest()[:10].upper()
+    data = [
+        ["Receipt No:", receipt_no], 
+        ["Transaction Date:", str(date_str)], 
+        ["Student ID:", str(student_id)], 
+        ["Department:", str(department)], 
+        ["Payment Mode:", "Online / Credit Card"], 
+        ["Amount Paid:", f"Rs. {amount}/-"], 
+        ["Payment Status:", "SUCCESSFUL"]
+    ]
+    
+    t = Table(data, colWidths=[2.5*inch, 3*inch])
+    t.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTNAME', (1,0), (1,-1), 'Helvetica'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 10), ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('BACKGROUND', (0,0), (0,-1), HexColor('#f2f2f2')), ('TEXTCOLOR', (0,0), (0,-1), HexColor('#1a237e')),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 0.5*inch))
+    
+    note_style = ParagraphStyle('Note', parent=styles['Normal'], fontSize=10, textColor=colors.black, alignment=TA_CENTER)
+    elements.append(Paragraph(f"This document confirms that <b>{student_id}</b> has cleared the dues for <b>{department}</b>.", note_style))
+    
+    doc.build(elements)
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    return f"Receipt_{student_id}_{department}.pdf", pdf_data
 
 def ViewPayments(request):
     global dept
@@ -861,33 +940,25 @@ def StudentPayDuesAction(request):
         year = request.POST.get('year')
         dept = request.POST.get('department')
         amount = request.POST.get('amount')
-        
         try:
             con = get_db_connection()
             with con:
                 cur = con.cursor()
-                # Insert payment using Raw SQL
                 cur.execute("insert into payments values(%s,%s,%s,%s,%s)", (student, year, dept, amount, str(date.today())))
                 con.commit()
-                
-            # Send Email Notification
-            notify_student(student, "Fee Payment Received", f"We have received a payment of Rs. {amount} for {dept}. Your balance has been updated.")
             
             # Generate and Download Receipt
             name, pdf = get_fee_receipt(student, dept, amount, str(date.today()))
             response = HttpResponse(pdf, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="{name}"'
             return response
-            
         except Exception as e:
-            return render(request, 'StudentScreen.html', {'data': f"<div class='alert-message error'>Error processing payment: {str(e)}</div>"})
-
+            return render(request, 'StudentScreen.html', {'data': f'Error: {e}'})
     return redirect('StudentScreen')
     
 
 def UploadDocument(request):
-    global uname  # <--- FIX: Moved to the top
-    
+    global uname
     if request.method == 'POST':
         student = request.POST.get('student_id')
         dept = request.POST.get('department')
@@ -896,17 +967,18 @@ def UploadDocument(request):
             return render(request, 'StudentScreen.html', {'data': 'No File'})
         
         f = request.FILES['document']
+        
+        # --- CHANGE START: Save to 'documents' subfolder ---
         fs = FileSystemStorage()
-        fname = fs.save(f.name, f)
+        # This saves the file as "documents/filename.pdf"
+        fname = fs.save('documents/' + f.name, f)
         fpath = fs.path(fname)
+        # --- CHANGE END ---
         
         exp_cat = "irrelevant document"
-        if dept == "Accounts": 
-            exp_cat = "tuition fee receipt"
-        elif dept == "Library": 
-            exp_cat = "library no due certificate"
-        elif dept == "Hostel": 
-            exp_cat = "hostel clearance form"
+        if dept == "Accounts": exp_cat = "tuition fee receipt"
+        elif dept == "Library": exp_cat = "library no due certificate"
+        elif dept == "Hostel": exp_cat = "hostel clearance form"
         
         valid, conf, msg = analyze_document_content(fpath, exp_cat)
         status = "Cleared" if valid else "Rejected"
@@ -915,12 +987,11 @@ def UploadDocument(request):
             con = get_db_connection()
             with con:
                 cur = con.cursor()
+                # Store the relative path (fname) in the database
                 cur.execute("insert into document_submissions(student_id, department, file_path, ai_verification_status, ai_confidence_score) values(%s,%s,%s,%s,%s)", 
                             (student, dept, fname, status, conf))
                 
                 if valid:
-                    # Update main table
-                    # Determine Year
                     cur.execute("select course_year from student where student_id=%s order by course_year desc limit 1", (student,))
                     row = cur.fetchone()
                     if row:
@@ -939,7 +1010,7 @@ def UploadDocument(request):
             
         except Exception as e:
             return render(request, 'StudentScreen.html', {'data': f"Error: {str(e)}"})
-        
+            
     return render(request, 'UploadDocument.html', {'student_id': uname})
 
 def AdminScreen(request):
@@ -1091,3 +1162,4 @@ def notify_student(student_id, subject, message):
 
 
         # end of the code ne push orking check
+

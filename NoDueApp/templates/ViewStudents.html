@@ -43,49 +43,44 @@
                             <table class="table table-bordered table-striped table-hover">
                                 <thead class="thead-dark">
                                     <tr>
-                                        <th>Student ID</th>
+                                        <th>ID</th>
                                         <th>Name</th>
-                                        <th>Contact</th>
-                                        <th>Email</th>
-                                        <th>Course</th>
-                                        <th>Year</th>
-                                        <th>Fees (Lib/Hos/Tut/Exm/Lab)</th>
-                                        <th>Actions</th>
+                                        <th>Course/Year</th>
+                                        <th>Total Fee</th>
+                                        <th>Paid</th>
+                                        <th>Due</th>
+                                        <th>Breakdown (T/P)</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for row in students %}
+                                    {% for s in students %}
                                     <tr>
-                                        <td style="font-weight:bold;">{{ row.0 }}</td>
-                                        <td>{{ row.1 }}</td>
-                                        <td>{{ row.3 }}</td>
-                                        <td>{{ row.4 }}</td>
-                                        <td>{{ row.6 }}</td>
-                                        <td>{{ row.7 }}</td>
+                                        <td style="font-weight:bold;">{{ s.id }}</td>
+                                        <td>{{ s.name }}</td>
+                                        <td>{{ s.course }} ({{ s.year }})</td>
+                                        <td>{{ s.total_fee }}</td>
+                                        <td class="text-success">{{ s.paid_fee }}</td>
+                                        <td class="text-danger font-weight-bold">{{ s.due_fee }}</td>
                                         
-                                        <td style="font-size: 0.9em;">
-                                            L: {{ row.9 }} / H: {{ row.10 }}<br>
-                                            T: {{ row.11 }} / E: {{ row.12 }}<br>
-                                            Lab: {{ row.13 }}
+                                        <td style="font-size: 0.85em;">
+                                            <b>Lib:</b> {{ s.lib }} <br>
+                                            <b>Hos:</b> {{ s.hos }} <br>
+                                            <b>Tut:</b> {{ s.tut }}
                                         </td>
 
                                         <td>
                                             <div style="display: flex; gap: 5px;">
                                                 <form action="UpdateStudentForm" method="get">
-                                                    <input type="hidden" name="student_id" value="{{ row.0 }}">
-                                                    <input type="hidden" name="course_year" value="{{ row.7 }}">
-                                                    <button type="submit" class="btn btn-warning btn-sm text-white" title="Edit">
-                                                        <i class="fa fa-edit"></i>
-                                                    </button>
+                                                    <input type="hidden" name="student_id" value="{{ s.id }}">
+                                                    <input type="hidden" name="course_year" value="{{ s.year }}">
+                                                    <button type="submit" class="btn btn-warning btn-sm text-white" title="Edit"><i class="fa fa-edit"></i></button>
                                                 </form>
-
-                                                <form action="DeleteStudentAction" method="post" onsubmit="return confirm('Delete Student {{ row.0 }}? This cannot be undone.');">
+                                                <form action="DeleteStudentAction" method="post" onsubmit="return confirm('Delete?');">
                                                     {% csrf_token %}
-                                                    <input type="hidden" name="student_id" value="{{ row.0 }}">
-                                                    <input type="hidden" name="course_year" value="{{ row.7 }}">
-                                                    <button type="submit" class="btn btn-danger btn-sm" title="Delete">
-                                                        <i class="fa fa-trash"></i>
-                                                    </button>
+                                                    <input type="hidden" name="student_id" value="{{ s.id }}">
+                                                    <input type="hidden" name="course_year" value="{{ s.year }}">
+                                                    <button type="submit" class="btn btn-danger btn-sm" title="Delete"><i class="fa fa-trash"></i></button>
                                                 </form>
                                             </div>
                                         </td>
@@ -95,9 +90,7 @@
                             </table>
                         </div>
                         {% else %}
-                            <div class="alert alert-warning text-center">
-                                <i class="fa fa-exclamation-triangle"></i> No students found.
-                            </div>
+                            <div class="alert alert-warning text-center">No students found.</div>
                         {% endif %}
 
                         <div class="mt-4">
