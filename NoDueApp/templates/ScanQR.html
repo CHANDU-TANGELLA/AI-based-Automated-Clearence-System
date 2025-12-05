@@ -1,343 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Basic -->
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">   
-   
-    <!-- Mobile Metas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
- 
-     <!-- Site Metas -->
-    <title>Scan QR Code - AI-Based Automated Clearance System</title>  
-    <meta name="keywords" content="">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <!-- Icon Font Stylesheet -->
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"/>
-
-    <!-- Site Icons -->
-    <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon" />
-    <link rel="apple-touch-icon" href="../static/images/apple-touch-icon.png">
-
-    <!-- Bootstrap CSS -->
+    <title>Verify Certificate - QR Scan</title>
     <link rel="stylesheet" href="../static/css/bootstrap.min.css">
-    <!-- Site CSS -->
     <link rel="stylesheet" href="../static/style.css">
-    <!-- ALL VERSION CSS -->
-    <link rel="stylesheet" href="../static/css/versions.css">
-    <!-- Responsive CSS -->
-    <link rel="stylesheet" href="../static/css/responsive.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../static/css/custom.css?v=3.0">
-
-    <!-- HTML5 QR Code Scanner Library -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
-
-    <!-- Modernizer for Portfolio -->
-    <script src="../static/js/modernizer.js"></script>
-
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
-
-    <style>
-        .qr-scanner-container {
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 30px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-        #reader {
-            width: 100%;
-            margin: 20px 0;
-        }
-        .scanner-controls {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .btn-scan {
-            background: linear-gradient(135deg, #eea512 0%, #d4940f 100%);
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin: 0 10px;
-            transition: all 0.3s ease;
-        }
-        .btn-scan:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(238, 165, 18, 0.4);
-        }
-        .btn-scan:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .certificate-display {
-            margin-top: 30px;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            display: none;
-        }
-        .certificate-display.show {
-            display: block;
-        }
-        .certificate-info {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .certificate-info h3 {
-            color: #1a237e;
-            margin-bottom: 15px;
-        }
-        .certificate-info p {
-            margin: 8px 0;
-            font-size: 15px;
-        }
-        .certificate-info strong {
-            color: #333;
-        }
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: none;
-        }
-        .error-message.show {
-            display: block;
-        }
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: none;
-        }
-        .success-message.show {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="../static/css/custom.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
-<body class="host_version"> 
+<body class="host_version">
 
-    <!-- LOADER -->
-	<div id="preloader">
-		<div class="loader-container">
-			<div class="progress-br float shadow">
-				<div class="progress__item"></div>
-			</div>
-		</div>
-	</div>
-	<!-- END LOADER -->	
-	
-	<!-- Start header -->
-	<header class="top-navbar">
-		<nav class="navbar navbar-expand-lg navbar-light bg-light">
-			<div class="container-fluid">
-				<a class="navbar-brand p-0" href="/">
-					<h1 class="text-white" style="font-size: xx-large;" ><i class="fa fa-certificate fa-1x me-2"></i> AI<span style="color: #eea412;">Clearance</span></h1>
-				</a>                                  
-				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbars-host" aria-controls="navbars-rs-food" aria-expanded="false" aria-label="Toggle navigation">
-					<span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-				</button>
-				<div class="collapse navbar-collapse" id="navbars-host">
-					<ul class="navbar-nav ml-auto">
-						<li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-						<li class="nav-item"><a class="nav-link" href="/AdminLogin.html">Admin Login</a></li>
-						<li class="nav-item"><a class="nav-link" href="/EmployeeLogin.html">Department Login</a></li>
-						<li class="nav-item"><a class="nav-link" href="/StudentLogin.html">Student Login</a></li>						
-						<li class="nav-item active"><a class="nav-link" href="/ScanQR.html"><i class="fa fa-qrcode"></i> Download Certificate by QR</a></li>
-					</ul>					
-				</div>
-			</div>
-		</nav>
-	</header>
-	<!-- End header -->
-	
-	<div class="qr-scanner-container">
-        <h2 style="text-align: center; margin-bottom: 20px;">
-            <i class="fa fa-qrcode"></i> Scan QR Code to Download Certificate
-        </h2>
-        
-        <div class="error-message" id="errorMessage"></div>
-        <div class="success-message" id="successMessage"></div>
-        
-        <div id="reader"></div>
-        
-        <div class="scanner-controls">
-            <button class="btn-scan" id="startScanBtn" onclick="startScan()">
-                <i class="fa fa-camera"></i> Start Camera
-            </button>
-            <button class="btn-scan" id="stopScanBtn" onclick="stopScan()" disabled>
-                <i class="fa fa-stop"></i> Stop Camera
-            </button>
-        </div>
-        
-        <div class="certificate-display" id="certificateDisplay">
-            <div class="certificate-info">
-                <h3><i class="fa fa-certificate"></i> Certificate Information</h3>
-                <div id="certificateDetails"></div>
-            </div>
-            <div style="text-align: center;">
-                <a href="#" id="downloadBtn" class="download-certificate-btn" style="display: none;">
-                    <i class="fa fa-download"></i> Download Certificate
+    <header class="top-navbar">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <a class="navbar-brand p-0" href="/">
+                    <h1 class="text-white" style="font-size: xx-large;">AI Clearance Verification</h1>
                 </a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container" style="margin-top: 50px;">
+        <div class="row">
+            <div class="col-md-6 offset-md-3 text-center">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3><i class="fa fa-qrcode"></i> Scan Certificate QR</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="reader" style="width: 100%;"></div>
+                        <div id="result" class="mt-3"></div>
+                        <hr>
+                        <h5>Or Upload QR Image</h5>
+                        <input type="file" id="qr-input-file" accept="image/*" class="form-control">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            // Parse text: Expecting format "Student ID: XXX\nYear: YYY"
+            // We'll regex search for the ID and Year
+            let studentMatch = decodedText.match(/Student ID:\s*(\w+)/);
+            let yearMatch = decodedText.match(/Year:\s*(\w+)/);
 
-    <!-- ALL JS FILES -->
-    <script src="../static/js/all.js"></script>
-    <!-- ALL PLUGINS -->
-    <script src="../static/js/custom.js"></script>
-	<script src="../static/js/timeline.min.js"></script>
-	
-	<script>
-        let html5QrcodeScanner = null;
-        let scannedData = null;
-        
-        function startScan() {
-            const startBtn = document.getElementById('startScanBtn');
-            const stopBtn = document.getElementById('stopScanBtn');
-            const errorMsg = document.getElementById('errorMessage');
-            const successMsg = document.getElementById('successMessage');
-            
-            errorMsg.classList.remove('show');
-            successMsg.classList.remove('show');
-            
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                },
-                (decodedText, decodedResult) => {
-                    // Successfully scanned
-                    stopScan();
-                    scannedData = decodedText;
-                    verifyAndDisplayCertificate(decodedText);
-                },
-                (errorMessage) => {
-                    // Error ignored for continuous scanning
-                }
-            ).then(() => {
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-            }).catch((err) => {
-                errorMsg.textContent = 'Error starting camera: ' + err;
-                errorMsg.classList.add('show');
-            });
-        }
-        
-        function stopScan() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    html5QrcodeScanner.clear();
-                    document.getElementById('startScanBtn').disabled = false;
-                    document.getElementById('stopScanBtn').disabled = true;
-                }).catch((err) => {
-                    console.error('Error stopping scanner:', err);
-                });
-            }
-        }
-        
-        function verifyAndDisplayCertificate(qrData) {
-            const errorMsg = document.getElementById('errorMessage');
-            const successMsg = document.getElementById('successMessage');
-            const certDisplay = document.getElementById('certificateDisplay');
-            const certDetails = document.getElementById('certificateDetails');
-            const downloadBtn = document.getElementById('downloadBtn');
-            
-            errorMsg.classList.remove('show');
-            successMsg.classList.remove('show');
-            
-            // Parse QR code data
-            const lines = qrData.split('\n');
-            let studentId = '';
-            let year = '';
-            let certNo = '';
-            let date = '';
-            let status = '';
-            
-            lines.forEach(line => {
-                if (line.startsWith('Student ID:')) {
-                    studentId = line.replace('Student ID:', '').trim();
-                } else if (line.startsWith('Year:')) {
-                    year = line.replace('Year:', '').trim();
-                } else if (line.startsWith('Certificate No:')) {
-                    certNo = line.replace('Certificate No:', '').trim();
-                } else if (line.startsWith('Date:')) {
-                    date = line.replace('Date:', '').trim();
-                } else if (line.startsWith('Status:')) {
-                    status = line.replace('Status:', '').trim();
-                }
-            });
-            
-            if (!studentId || !year) {
-                errorMsg.textContent = 'Invalid QR code format. Please scan a valid certificate QR code.';
-                errorMsg.classList.add('show');
-                return;
-            }
-            
-            // Verify certificate via AJAX
-            fetch('/VerifyCertificate?student_id=' + encodeURIComponent(studentId) + '&year=' + encodeURIComponent(year))
+            if (studentMatch && yearMatch) {
+                let sid = studentMatch[1];
+                let yr = yearMatch[1];
+                
+                document.getElementById('result').innerHTML = `<div class="alert alert-info">Verifying...</div>`;
+                
+                // Call Server
+                fetch(`/VerifyCertificate?student_id=${sid}&year=${yr}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        // Display certificate information
-                        certDetails.innerHTML = `
-                            <p><strong>Student ID:</strong> ${studentId}</p>
-                            <p><strong>Student Name:</strong> ${data.student_name || 'N/A'}</p>
-                            <p><strong>Course:</strong> ${data.course || 'N/A'}</p>
-                            <p><strong>Year:</strong> ${year}</p>
-                            <p><strong>Certificate No:</strong> ${certNo}</p>
-                            <p><strong>Date of Issue:</strong> ${date}</p>
-                            <p><strong>Status:</strong> <span style="color: green; font-weight: bold;">${status}</span></p>
-                        `;
-                        
-                        // Set download link
-                        downloadBtn.href = '/DownloadByQR?student_id=' + encodeURIComponent(studentId) + '&year=' + encodeURIComponent(year);
-                        downloadBtn.style.display = 'inline-block';
-                        
-                        certDisplay.classList.add('show');
-                        successMsg.textContent = 'Certificate verified successfully!';
-                        successMsg.classList.add('show');
+                    if(data.success) {
+                        document.getElementById('result').innerHTML = `
+                            <div class="alert alert-success">
+                                <h4><i class="fa fa-check-circle"></i> Valid Certificate</h4>
+                                <p><strong>Student:</strong> ${data.student_name}</p>
+                                <p><strong>Course:</strong> ${data.course}</p>
+                                <p>${data.message}</p>
+                            </div>`;
                     } else {
-                        errorMsg.textContent = data.message || 'Certificate verification failed.';
-                        errorMsg.classList.add('show');
+                        document.getElementById('result').innerHTML = `<div class="alert alert-danger"><i class="fa fa-times-circle"></i> ${data.message}</div>`;
                     }
-                })
-                .catch(error => {
-                    errorMsg.textContent = 'Error verifying certificate: ' + error;
-                    errorMsg.classList.add('show');
                 });
+            } else {
+                document.getElementById('result').innerHTML = `<div class="alert alert-warning">Invalid QR Format</div>`;
+            }
         }
+
+        var html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
         
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            stopScan();
+        // File Upload Logic
+        const fileinput = document.getElementById('qr-input-file');
+        fileinput.addEventListener('change', e => {
+            if (e.target.files.length == 0) return;
+            const html5QrCode = new Html5Qrcode("reader");
+            const imageFile = e.target.files[0];
+            html5QrCode.scanFile(imageFile, true)
+            .then(decodedText => onScanSuccess(decodedText, null))
+            .catch(err => {
+                document.getElementById('result').innerHTML = `<div class="alert alert-danger">Could not read QR code from image</div>`;
+            });
         });
     </script>
 </body>
 </html>
-
-

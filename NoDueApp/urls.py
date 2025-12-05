@@ -44,4 +44,7 @@ urlpatterns = [
     path("UploadDocument", views.UploadDocument, name="UploadDocument"),
     path("StudentPayDues", views.StudentPayDues, name="StudentPayDues"),
     path("StudentPayDuesAction", views.StudentPayDuesAction, name="StudentPayDuesAction"),
+    
+    # --- LOGOUT PATH ADDED HERE ---
+    path("Logout", views.Logout, name="Logout"),
 ]

@@ -1,41 +1,60 @@
-create database geminidatabase;
-use geminidatabase;
+-- 1. Create and Select the Database (Matching your views.py)
+CREATE DATABASE IF NOT EXISTS nodue_new;
+USE nodue_new;
 
-create table employees(emp_name varchar(40),
-gender varchar(20),
-contact_no varchar(20),
-email varchar(50), 
-qualification varchar(65),
-experience varchar(45),
-user_role varchar(35),
-username varchar(50) primary key,
-password varchar(50));
-
-create table student(student_id varchar(50),
-student_name varchar(40),
-gender varchar(20),
-contact_no varchar(20),
-email varchar(50), 
-address varchar(200),
-course varchar(50),
-course_year varchar(20),
-password varchar(50),
-library_fee double,
-hostel_fee double,
-tution_fee double,
-exam_fee double,
-lab_hod_fee double,
-PRIMARY KEY(student_id, course_year));
-
-create table payments(student_id varchar(50),course_year varchar(20),paying_dept varchar(50), amount double, payment_date varchar(30));
-
-create table document_submissions(
-    id integer primary key autoincrement,
-    student_id varchar(50),
-    department varchar(50),
-    document_type varchar(50),
-    file_path varchar(255),
-    uploaded_at datetime,
-    ai_verification_status varchar(20),
-    ai_confidence_score double
+-- 2. Create Employees Table
+CREATE TABLE employees (
+    emp_name VARCHAR(40),
+    gender VARCHAR(20),
+    contact_no VARCHAR(20),
+    email VARCHAR(50), 
+    qualification VARCHAR(65),
+    experience VARCHAR(45),
+    user_role VARCHAR(35),
+    username VARCHAR(50) PRIMARY KEY,
+    password VARCHAR(50)
 );
+
+-- 3. Create Student Table
+CREATE TABLE student (
+    student_id VARCHAR(50),
+    student_name VARCHAR(40),
+    gender VARCHAR(20),
+    contact_no VARCHAR(20),
+    email VARCHAR(50), 
+    address VARCHAR(200),
+    course VARCHAR(50),
+    course_year VARCHAR(20),
+    password VARCHAR(50),
+    library_fee DOUBLE,
+    hostel_fee DOUBLE,
+    tution_fee DOUBLE,
+    exam_fee DOUBLE,
+    lab_hod_fee DOUBLE,
+    PRIMARY KEY(student_id, course_year)
+);
+
+-- 4. Create Payments Table
+CREATE TABLE payments (
+    student_id VARCHAR(50),
+    course_year VARCHAR(20),
+    paying_dept VARCHAR(50),
+    amount DOUBLE,
+    payment_date VARCHAR(30)
+);
+
+-- 5. Create Document Submissions Table (For AI Feature)
+CREATE TABLE document_submissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR(50),
+    department VARCHAR(50),
+    document_type VARCHAR(50),
+    file_path VARCHAR(255),
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ai_verification_status VARCHAR(20),
+    ai_confidence_score DOUBLE
+);
+
+-- 6. Insert Default Admin User
+INSERT INTO employees (emp_name, gender, contact_no, email, qualification, experience, user_role, username, password) 
+VALUES ('Administrator', 'NA', '1234567890', 'admin@college.edu', 'MBA', '10', 'Admin', 'admin', 'admin');

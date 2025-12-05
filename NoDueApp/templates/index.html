@@ -1,62 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-<head></head>
-    <!-- Basic -->
+<head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">   
-   
-    <!-- Mobile Metas -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
- 
-     <!-- Site Metas -->
     <title>Home - AI-Based Automated Clearance System</title>  
-    <meta name="keywords" content="">
-    <meta name="description" content="">
-    <meta name="author" content="">
 
-
-
-    <!-- Icon Font Stylesheet -->
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"/>
-
-    <!-- Site Icons -->
-    <link rel="shortcut icon" href="../static/images/favicon.ico" type="image/x-icon" />
-    <link rel="apple-touch-icon" href="../static/images/apple-touch-icon.png">
-
-    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../static/css/bootstrap.min.css">
-    <!-- Site CSS -->
     <link rel="stylesheet" href="../static/style.css">
-    <!-- ALL VERSION CSS -->
     <link rel="stylesheet" href="../static/css/versions.css">
-    <!-- Responsive CSS -->
     <link rel="stylesheet" href="../static/css/responsive.css">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="../static/css/custom.css">
-
-    <!-- Modernizer for Portfolio -->
     <script src="../static/js/modernizer.js"></script>
-
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
-
 </head>
 <body class="host_version"> 
 
-    <!-- LOADER -->
-	<div id="preloader">
+    <div id="preloader">
 		<div class="loader-container">
 			<div class="progress-br float shadow">
 				<div class="progress__item"></div>
 			</div>
 		</div>
 	</div>
-	<!-- END LOADER -->	
 	
-	<!-- Start header -->
 	<header class="top-navbar">
 		<nav class="navbar navbar-expand-lg navbar-light bg-light">
 			<div class="container-fluid">
@@ -71,19 +38,25 @@
 				<div class="collapse navbar-collapse" id="navbars-host">
 					<ul class="navbar-nav ml-auto">
 						<li class="nav-item active"><a class="nav-link" href="/">Home</a></li>
-						<li class="nav-item"><a class="nav-link" href="/AdminLogin.html">Admin Login</a></li>
-						<li class="nav-item"><a class="nav-link" href="/EmployeeLogin.html">Department Login</a></li>
-						<li class="nav-item"><a class="nav-link" href="/StudentLogin.html">Student Login</a></li>						
-						<li class="nav-item"><a class="nav-link" href="/ScanQR.html"><i class="fa fa-qrcode"></i> Download Certificate by QR</a></li>
+                        
+                        {% if uname %}
+                            <li class="nav-item"><a class="nav-link" href="{{ dashboard_link }}"><i class="fa fa-tachometer-alt"></i> Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/" onclick="location.href='/'"><i class="fa fa-user"></i> {{ uname }} ({{ user_role }})</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/" onclick="location.reload();"><i class="fa fa-sign-out-alt"></i> Logout</a></li>
+                        {% else %}
+                            <li class="nav-item"><a class="nav-link" href="/AdminLogin.html">Admin Login</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/EmployeeLogin.html">Department Login</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/StudentLogin.html">Student Login</a></li>						
+                        {% endif %}
+                        
+						<li class="nav-item"><a class="nav-link" href="/ScanQR.html"><i class="fa fa-qrcode"></i> Verify Cert</a></li>
 					</ul>					
 				</div>
 			</div>
 		</nav>
 	</header>
-	<!-- End header -->
 	
-	<div id="carouselExampleControls" class="carousel slide bs-slider box-slider" data-ride="carousel" data-pause="hover" data-interval="false" >
-		<!-- Indicators -->
+    <div id="carouselExampleControls" class="carousel slide bs-slider box-slider" data-ride="carousel" data-pause="hover" data-interval="false" >
 		<ol class="carousel-indicators">
 			<li data-target="#carouselExampleControls" data-slide-to="0" class="active"></li>
 			<li data-target="#carouselExampleControls" data-slide-to="1"></li>
@@ -96,14 +69,15 @@
 							<div class="row">
 								<div class="col-md-12 col-sm-12 text-center">
 									<div class="big-tagline">
-                                        <h4 class="text-uppercase text-white mb-4" style="font-size:x-large;"> Welcome To Clearance System</h4>
-										<h2>AI-Based Automated Clearance System</h2>
+                                        <h4 class="text-uppercase text-white mb-4" style="font-size:x-large;">Smart Campus Solution</h4>
+										<h2>AI-Based Automated Clearance</h2>
+                                        <p class="lead">Experience the future of academic administration with our paperless, instant, and secure clearance system.</p>
 									</div>
 								</div>
-							</div><!-- end row -->            
-						</div><!-- end container -->
+							</div>        
+						</div>
 					</div>
-				</div><!-- end section -->
+				</div>
 			</div>
 			<div class="carousel-item">
 				<div id="home" class="first-section" style="background-image:url('../static/images/regression-prediction.jpg');">
@@ -112,22 +86,20 @@
 							<div class="row">
 								<div class="col-md-12 col-sm-12 text-center">
 									<div class="big-tagline">
-                                        <h4 class="text-uppercase text-white mb-4" style="font-size:x-large;"> Welcome To Clearance System</h4>
-										<h2>AI-Based Automated Clearance System</h2>
+                                        <h4 class="text-uppercase text-white mb-4" style="font-size:x-large;">Zero-Shot AI Verification</h4>
+										<h2>Instant Document Validation</h2>
+                                        <p class="lead">Upload your receipts and let our AI agents verify them instantly. No more waiting in lines.</p>
 									</div>
 								</div>
-							</div><!-- end row -->            
-						</div><!-- end container -->
+							</div>      
+						</div>
 					</div>
-				</div><!-- end section -->
+				</div>
 			</div>			
-			<!-- Left Control -->
 			<a class="new-effect carousel-control-prev" href="#carouselExampleControls" role="button" data-slide="prev">
 				<span class="fa fa-angle-left" aria-hidden="true"></span>
 				<span class="sr-only">Previous</span>
 			</a>
-
-			<!-- Right Control -->
 			<a class="new-effect carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
 				<span class="fa fa-angle-right" aria-hidden="true"></span>
 				<span class="sr-only">Next</span>
@@ -135,84 +107,86 @@
 		</div>
 	</div>
 	
+    <div id="features" class="section lb">
+        <div class="container">
+            <div class="section-title text-center">
+                <h3>Key Features</h3>
+                <p>Revolutionizing the way you clear your dues.</p>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="service-widget">
+                        <div class="post-media wow fadeIn">
+                            <i class="fa fa-robot fa-4x" style="color: #eea412;"></i>
+                        </div>
+                        <h3>AI Document Verification</h3>
+                        <p>Upload your fee receipts or NO DUE forms. Our intelligent Zero-Shot classifier validates them instantly against departmental requirements.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="service-widget">
+                        <div class="post-media wow fadeIn">
+                            <i class="fa fa-credit-card fa-4x" style="color: #eea412;"></i>
+                        </div>
+                        <h3>Online Fee Payment</h3>
+                        <p>Pay your pending dues for Library, Hostel, or Tuition directly through the portal and get an instant digital receipt.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="service-widget">
+                        <div class="post-media wow fadeIn">
+                            <i class="fa fa-qrcode fa-4x" style="color: #eea412;"></i>
+                        </div>
+                        <h3>QR Code Validation</h3>
+                        <p>Generated certificates come with a unique cryptographic QR code. Scan it to instantly verify authenticity anywhere.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="overviews" class="section wb">
         <div class="container">
             <div class="section-title row text-center">
-                <div class="col-md-10 ">
-                    <h3>About</h3>
-                    <h2 style="font-size: 30px;" >AI-Based Automated Clearance System</h2>
+                <div class="col-md-10 offset-md-1">
+                    <h3>About the System</h3>
+                    <p class="lead">An intelligent platform integrating Accounts, Library, Hostel, and Exam departments.</p>
                 </div>
-            </div><!-- end title -->
+            </div>
         
             <div class="row align-items-center">
                 <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12">
                     <div class="message-box">
                         <p>
-                            <b>AI-Based Automated Clearance System</b> is an intelligent platform designed to streamline and automate the no-due certificate generation process for educational institutions. This system leverages artificial intelligence to efficiently manage and verify student fee clearances across multiple departments.
+                            <b>AI-Based Automated Clearance System</b> leverages artificial intelligence to efficiently manage and verify student fee clearances. By automating the workflow between students and departments, we reduce manual errors and processing time by over 90%.
                         </p>
-
-                        <p> 
-                            The system integrates various departmental workflows including Accounts, Library, Hostel, Exam Fee Department, and HOD Lab Returns. Through automated verification and AI-powered processing, students can quickly generate their no-due certificates once all departmental dues are cleared.
-                        </p>
-                    </div><!-- end messagebox -->
-                </div><!-- end col -->
+                        <a href="/StudentLogin.html" class="hover-btn-new orange"><span>Get Started Now</span></a>
+                    </div>
+                </div>
 				
 				<div class="col-xl-6 col-lg-6 col-md-12 col-sm-12">
                     <div class="post-media wow fadeIn">
-                        <img src="../static/images/about-1.jpg" alt="" class=" img-rounded" style="height: 450px; padding: 50px;" >
-                    </div><!-- end media -->
-                </div><!-- end col -->
+                        <img src="../static/images/about-1.jpg" alt="" class="img-fluid img-rounded">
+                    </div>
+                </div>
 			</div>
-			<div class="row align-items-center">
-				<div class="col-xl-6 col-lg-6 col-md-12 col-sm-12">
-                    <div class="post-media wow fadeIn">
-                        <img src="../static/images/about-2.jpg" alt="" class="img-rounded" style="height: 450px; padding: 50px;">
-                    </div><!-- end media -->
-                </div><!-- end col -->
-				
-				<div class="col-xl-6 col-lg-6 col-md-12 col-sm-12">
-                    <div class="message-box">
-                        <p> 
-                            Our system provides a <b>multi-agent AI architecture</b> where each department is represented by an AI agent that communicates with a central orchestrator. This ensures seamless coordination between departments, real-time fee tracking, and instant certificate generation upon clearance of all dues.
-                        </p>
-
-                        <p> 
-                            The platform offers secure login portals for Administrators, Department Employees, and Students, enabling efficient management of student records, fee payments, and certificate generation with minimal manual intervention.
-                        </p>
-
-                        <a href="/StudentLogin.html" class="hover-btn-new orange"><span>Get Started</span></a>
-                    </div><!-- end messagebox -->
-                </div><!-- end col -->
-				
-            </div><!-- end row -->
-        </div><!-- end container -->
-    </div><!-- end section -->
-
+        </div>
+    </div>
 
     <div class="copyrights">
         <div class="container">
             <div class="footer-distributed">
                 <div class="footer-center">                   
-                    <p class="footer-company-name">All Rights Reserved. © 2018 SmartEDU Design By : html design, Modified By: "Your Name"</p>
+                    <p class="footer-company-name">All Rights Reserved. © 2024 AI Clearance System</p>
                 </div>
             </div>
-        </div><!-- end container -->
-    </div><!-- end copyrights -->
+        </div>
+    </div>
 
     <a href="#" id="scroll-to-top" class="dmtop global-radius"><i class="fa fa-angle-up"></i></a>
 
-    <!-- ALL JS FILES -->
     <script src="../static/js/all.js"></script>
-    <!-- ALL PLUGINS -->
     <script src="../static/js/custom.js"></script>
 	<script src="../static/js/timeline.min.js"></script>
-	<script>
-		timeline(document.querySelectorAll('.timeline'), {
-			forceVerticalMode: 700,
-			mode: 'horizontal',
-			verticalStartPosition: 'left',
-			visibleItems: 4
-		});
-	</script>
 </body>
 </html>
