@@ -663,10 +663,12 @@ def GenerateNoDue(request):
     return render(request, 'GenerateNoDue.html', {'student_id': uname})
 
 def GenerateNoDueAction(request):
+    # Declare globals at the very top of the function
+    global uname, student_year, student_name_global, student_course_global, cleared, df
+
     if request.method == 'POST':
         student = request.POST.get('t1')
         year = request.POST.get('t2')
-        global uname, student_year, student_name_global, student_course_global, cleared, df
         
         # Update Globals
         uname = student
@@ -703,11 +705,9 @@ def GenerateNoDueAction(request):
         if all_clear:
             notify_student(student, "Clearance Successful", "Your No Due Certificate has been generated and is ready for download.")
         
-        # FIX: Pass 'is_cleared' to template so buttons appear
         return render(request, 'StudentScreen.html', {'data': output, 'is_cleared': cleared})
 
-    # GET Request
-    global uname
+    # GET Request: Use the global uname safely
     student_id_value = uname if uname else ''
     return render(request, 'GenerateNoDue.html', {'student_id': student_id_value})
 
@@ -1089,4 +1089,5 @@ def notify_student(student_id, subject, message):
         print(f"Error sending email: {e}")
 
 
-        ### heloo checking changes
+
+        # end of the code ne push orking check
